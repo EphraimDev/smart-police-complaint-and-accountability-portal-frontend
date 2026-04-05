@@ -30,7 +30,7 @@ import type {
    Common API Client
    ═══════════════════════════════════════════════ */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL + '/api/v1';
 const TOKEN_KEY = 'spcap_token';
 const REFRESH_TOKEN_KEY = 'spcap_refresh_token';
 

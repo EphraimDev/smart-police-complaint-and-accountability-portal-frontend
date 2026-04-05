@@ -25,7 +25,7 @@ const faqs = [
   },
   {
     q: 'Can I submit evidence or documents?',
-    a: 'Document and media upload support is planned for a future release. Currently, please describe all evidence in the complaint description and include any reference numbers, dates, and witness details.',
+    a: 'Yes, you can submit audio, video, images, or PDF files as evidence.',
   },
   {
     q: "What if I don't know the officer's name or badge number?",

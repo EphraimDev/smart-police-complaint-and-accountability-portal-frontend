@@ -151,22 +151,65 @@ export interface ComplaintSubmissionResponse {
 }
 
 export interface ComplaintResult {
-  id: string;
-  reference: string;
-  title: string;
-  description: string;
-  status: ComplaintStatus;
-  category: string;
-  severity: string;
-  complainantName?: string;
-  incidentDate?: string;
-  incidentLocation?: string;
-  createdAt: string;
-  updatedAt: string;
-  statusHistory?: Array<{
-    status: ComplaintStatus;
+  success: boolean;
+  message: string;
+  correlationId: string;
+  data: {
+    id: string;
     createdAt: string;
-    reason?: string;
-    changedBy?: string;
-  }>;
+    updatedAt: string;
+    createdBy: null | string | { id: string; firstName: string; lastName: string };
+    updatedBy: null | string | { id: string; firstName: string; lastName: string };
+    referenceNumber: string;
+    title: string;
+    description: string;
+    status: ComplaintStatus;
+    severity: string;
+    category: string;
+    source: string;
+    channel: string;
+    isAnonymous: boolean;
+    citizenUserId: null | string;
+    incidentDate: string;
+    incidentLocation: string;
+    stationId: null | string;
+    resolutionSummary: null | string;
+    closedAt: null | string;
+    slaDueDate: null | string;
+    isOverdue: boolean;
+    idempotencyKey: null | string;
+    version: number;
+    isTrackingTokenAuthenticated: boolean;
+    statusHistory: {
+      previousStatus: ComplaintStatus | null;
+      newStatus: ComplaintStatus;
+      changedAt: string;
+      changedById: string;
+      reasonCode: null | string;
+      reason: string;
+    }[];
+    attachments: {
+      id: string;
+      createdAt: string;
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: null | string;
+      complaintId: string;
+      fileName: string;
+      originalName: string;
+      mimeType: string;
+      fileSize: string;
+      storagePath: string;
+      storageProvider: string;
+      fileHash: string;
+      hashAlgorithm: string;
+      evidenceType: string;
+      accessLevel: string;
+      description: null | string;
+      isMalwareScanned: boolean;
+      malwareScanResult: null | string;
+      isIntegrityVerified: boolean;
+      fileUrl: string;
+    }[];
+  };
 }
