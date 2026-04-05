@@ -30,6 +30,8 @@ const adminUser: AuthUser = {
   id: 'usr-001',
   email: 'admin@npf.gov.ng',
   fullName: 'Superintendent Abubakar',
+  firstName: 'Superintendent',
+  lastName: 'Abubakar',
   role: 'admin',
 };
 
@@ -37,6 +39,8 @@ const officerUser: AuthUser = {
   id: 'usr-002',
   email: 'officer@npf.gov.ng',
   fullName: 'Constable Ibrahim',
+  firstName: 'Constable',
+  lastName: 'Ibrahim',
   role: 'officer',
 };
 

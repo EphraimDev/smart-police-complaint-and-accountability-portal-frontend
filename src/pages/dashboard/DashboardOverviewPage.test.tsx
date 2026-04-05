@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@/test/test-utils';
+import { render, screen } from '@/test/test-utils';
 import { DashboardOverviewPage } from './DashboardOverviewPage';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';

@@ -2,12 +2,12 @@ import type { ComplaintStatus } from './complaint';
 
 /* ── Report filters ── */
 export interface ReportFilters {
-  dateFrom?: string;
-  dateTo?: string;
-  status?: ComplaintStatus | '';
+  startDate?: string;
+  endDate?: string;
+  stationId?: string;
+  officerId?: string;
   category?: string;
-  state?: string;
-  station?: string;
+  period?: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 }
 
 /* ── Chart data points ── */
@@ -46,7 +46,7 @@ export interface OfficerPerformance {
   avgResolutionDays: number;
 }
 
-/* ── Reports response ── */
+/* ── Reports response (aggregated from multiple endpoints) ── */
 export interface ReportsData {
   complaintsTrend: TimeSeriesPoint[];
   categoryBreakdown: CategoryBreakdown[];
@@ -65,39 +65,42 @@ export interface ReportsData {
 /* ── Admin types ── */
 export interface AdminUser {
   id: string;
+  firstName: string;
+  lastName: string;
   fullName: string;
   email: string;
+  phone?: string;
   role: 'admin' | 'officer' | 'investigator' | 'supervisor';
-  status: 'active' | 'inactive' | 'suspended';
+  roles?: Array<{ id: string; name: string }>;
+  isActive: boolean;
   stationName?: string;
   createdAt: string;
   lastLoginAt?: string;
 }
 
 export interface CreateUserPayload {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: AdminUser['role'];
-  stationId?: string;
+  password: string;
+  phone?: string;
+  roleIds?: string[];
 }
 
 export interface UpdateUserPayload {
-  fullName?: string;
-  email?: string;
-  role?: AdminUser['role'];
-  status?: AdminUser['status'];
-  stationId?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 }
 
 /* ── Profile types ── */
 export interface ProfileUpdatePayload {
-  fullName: string;
-  email: string;
+  firstName: string;
+  lastName: string;
   phone?: string;
 }
 
 export interface ChangePasswordPayload {
   currentPassword: string;
   newPassword: string;
-  confirmPassword: string;
 }

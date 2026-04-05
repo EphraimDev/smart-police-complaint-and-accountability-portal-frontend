@@ -30,7 +30,7 @@ export function ProfileSettingsPage() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-100 text-xl font-bold text-primary-700">
-              {user.fullName
+              {(user.fullName ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`)
                 .split(' ')
                 .map((n) => n[0])
                 .join('')
@@ -38,7 +38,7 @@ export function ProfileSettingsPage() {
                 .toUpperCase()}
             </div>
             <div>
-              <p className="text-lg font-semibold text-gray-900">{user.fullName}</p>
+              <p className="text-lg font-semibold text-gray-900">{user.fullName ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`}</p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">{user.email}</span>
                 <Badge variant="primary" className="capitalize">
@@ -51,7 +51,11 @@ export function ProfileSettingsPage() {
       </Card>
 
       {/* Edit profile */}
-      <ProfileForm key={user.id} initialName={user.fullName} initialEmail={user.email} />
+      <ProfileForm
+        key={user.id}
+        initialFirstName={user.firstName ?? ''}
+        initialLastName={user.lastName ?? ''}
+      />
 
       {/* Change password */}
       <ChangePasswordForm />
@@ -60,15 +64,15 @@ export function ProfileSettingsPage() {
 }
 
 function ProfileForm({
-  initialName,
-  initialEmail,
+  initialFirstName,
+  initialLastName,
 }: {
-  initialName: string;
-  initialEmail: string;
+  initialFirstName: string;
+  initialLastName: string;
 }) {
   const mutation = useUpdateProfile();
-  const [fullName, setFullName] = useState(initialName);
-  const [email, setEmail] = useState(initialEmail);
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [lastName, setLastName] = useState(initialLastName);
   const [phone, setPhone] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -76,7 +80,7 @@ function ProfileForm({
     e.preventDefault();
     setSuccess(false);
     mutation.mutate(
-      { fullName, email, phone: phone || undefined },
+      { firstName, lastName, phone: phone || undefined },
       { onSuccess: () => setSuccess(true) },
     );
   };
@@ -93,17 +97,16 @@ function ProfileForm({
             <Alert variant="danger">Failed to update profile. Please try again.</Alert>
           )}
           <Input
-            label="Full Name"
+            label="First Name"
             required
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
           />
           <Input
-            label="Email"
-            type="email"
+            label="Last Name"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
           />
           <Input
             label="Phone (optional)"
@@ -144,7 +147,7 @@ function ChangePasswordForm() {
     }
 
     mutation.mutate(
-      { currentPassword: current, newPassword: newPass, confirmPassword: confirm },
+      { currentPassword: current, newPassword: newPass },
       {
         onSuccess: () => {
           setSuccess(true);

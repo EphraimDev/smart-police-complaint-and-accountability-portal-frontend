@@ -5,15 +5,22 @@ import { BarChart, DonutChart, StatCard, TrendLine } from '@/components/Charts';
 import { Table, TableHead, TableBody, TableRow, Th, Td } from '@/components/Table';
 import { Skeleton } from '@/components/Skeleton';
 import { ErrorState } from '@/components/ErrorState';
-import { complaintCategories, nigerianStates } from '@/types/complaint';
+import { complaintCategories } from '@/types/complaint';
 import type { ReportFilters } from '@/types/reports';
 
 const statusColors: Record<string, string> = {
-  received: '#6B7280',
-  'under-review': '#D97706',
-  investigating: '#B45309',
+  draft: '#9CA3AF',
+  submitted: '#3B82F6',
+  acknowledged: '#6366F1',
+  under_review: '#D97706',
+  assigned: '#8B5CF6',
+  under_investigation: '#B45309',
+  awaiting_response: '#F59E0B',
+  escalated: '#DC2626',
   resolved: '#059669',
-  dismissed: '#DC2626',
+  closed: '#6B7280',
+  rejected: '#EF4444',
+  withdrawn: '#9CA3AF',
 };
 
 const categoryColors = [
@@ -29,27 +36,14 @@ const categoryColors = [
 
 const filterFields: FilterField[] = [
   {
-    name: 'dateFrom',
+    name: 'startDate',
     label: 'From Date',
     type: 'date',
   },
   {
-    name: 'dateTo',
+    name: 'endDate',
     label: 'To Date',
     type: 'date',
-  },
-  {
-    name: 'status',
-    label: 'Status',
-    type: 'select',
-    placeholder: 'All Statuses',
-    options: [
-      { value: 'received', label: 'Received' },
-      { value: 'under-review', label: 'Under Review' },
-      { value: 'investigating', label: 'Investigating' },
-      { value: 'resolved', label: 'Resolved' },
-      { value: 'dismissed', label: 'Dismissed' },
-    ],
   },
   {
     name: 'category',
@@ -59,20 +53,25 @@ const filterFields: FilterField[] = [
     options: complaintCategories.map((c) => ({ value: c.value, label: c.label })),
   },
   {
-    name: 'state',
-    label: 'State',
+    name: 'period',
+    label: 'Period',
     type: 'select',
-    placeholder: 'All States',
-    options: nigerianStates.map((s) => ({ value: s, label: s })),
+    placeholder: 'Select Period',
+    options: [
+      { value: 'daily', label: 'Daily' },
+      { value: 'weekly', label: 'Weekly' },
+      { value: 'monthly', label: 'Monthly' },
+      { value: 'quarterly', label: 'Quarterly' },
+      { value: 'yearly', label: 'Yearly' },
+    ],
   },
 ];
 
 const defaultFilters: Record<string, string> = {
-  dateFrom: '',
-  dateTo: '',
-  status: '',
+  startDate: '',
+  endDate: '',
   category: '',
-  state: '',
+  period: '',
 };
 
 export function ReportsPage() {
@@ -88,12 +87,11 @@ export function ReportsPage() {
 
   const handleApply = useCallback(() => {
     const filters: ReportFilters = {};
-    if (filterValues.dateFrom) filters.dateFrom = filterValues.dateFrom;
-    if (filterValues.dateTo) filters.dateTo = filterValues.dateTo;
-    if (filterValues.status)
-      filters.status = filterValues.status as ReportFilters['status'];
+    if (filterValues.startDate) filters.startDate = filterValues.startDate;
+    if (filterValues.endDate) filters.endDate = filterValues.endDate;
     if (filterValues.category) filters.category = filterValues.category;
-    if (filterValues.state) filters.state = filterValues.state;
+    if (filterValues.period)
+      filters.period = filterValues.period as ReportFilters['period'];
     setAppliedFilters(Object.keys(filters).length > 0 ? filters : undefined);
   }, [filterValues]);
 
@@ -144,7 +142,7 @@ export function ReportsPage() {
         <DonutChart
           title="Status Distribution"
           data={data.statusBreakdown.map((s) => ({
-            label: s.status.replace('-', ' '),
+            label: s.status.replace(/_/g, ' '),
             value: s.count,
             color: statusColors[s.status] ?? '#6B7280',
           }))}

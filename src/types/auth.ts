@@ -7,23 +7,29 @@ export type UserRole = 'admin' | 'officer' | 'investigator' | 'supervisor';
 export interface AuthUser {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
   fullName: string;
   role: UserRole;
+  roles?: Array<{ id: string; name: string }>;
   avatarUrl?: string;
+  isActive?: boolean;
 }
 
 /* ── Auth state ── */
 export interface AuthState {
   user: AuthUser | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 /* ── API response ── */
 export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
   user: AuthUser;
-  token: string;
 }
 
 export interface ForgotPasswordResponse {

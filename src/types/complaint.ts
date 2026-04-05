@@ -1,45 +1,42 @@
 import { z } from 'zod';
 
-/* ── Zod schema for public complaint submission ── */
-export const complaintSchema = z.object({
-  fullName: z
-    .string()
-    .min(2, 'Full name must be at least 2 characters')
-    .max(120, 'Full name must be under 120 characters'),
-  email: z.string().email('Enter a valid email address'),
-  phone: z
-    .string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must be under 15 digits')
-    .regex(/^[0-9+\-\s]+$/, 'Enter a valid phone number'),
-  state: z.string().min(1, 'Select a state'),
-  lga: z.string().min(1, 'Enter the Local Government Area'),
-  policeStation: z.string().min(2, 'Enter the police station name'),
-  officerName: z.string().optional(),
-  officerBadgeNumber: z.string().optional(),
-  incidentDate: z.string().min(1, 'Select the date of the incident'),
-  category: z.string().min(1, 'Select a complaint category'),
-  description: z
-    .string()
-    .min(20, 'Describe the incident in at least 20 characters')
-    .max(3000, 'Description must be under 3000 characters'),
-  consent: z.literal(true, {
-    message: 'You must agree to submit your complaint',
-  }),
-});
+/* ── Complaint status (matches API enum) ── */
+export type ComplaintStatus =
+  | 'draft'
+  | 'submitted'
+  | 'acknowledged'
+  | 'under_review'
+  | 'assigned'
+  | 'under_investigation'
+  | 'awaiting_response'
+  | 'escalated'
+  | 'resolved'
+  | 'closed'
+  | 'rejected'
+  | 'withdrawn';
 
-export type ComplaintFormData = z.infer<typeof complaintSchema>;
-
-/* ── Complaint categories ── */
+/* ── Complaint categories (matches API enum) ── */
 export const complaintCategories = [
-  { value: 'extortion', label: 'Extortion / Bribery' },
-  { value: 'assault', label: 'Physical Assault' },
-  { value: 'unlawful-detention', label: 'Unlawful Detention' },
-  { value: 'harassment', label: 'Harassment / Intimidation' },
-  { value: 'negligence', label: 'Negligence of Duty' },
-  { value: 'illegal-search', label: 'Illegal Search / Seizure' },
+  { value: 'excessive_force', label: 'Excessive Force' },
+  { value: 'misconduct', label: 'Misconduct' },
   { value: 'corruption', label: 'Corruption' },
+  { value: 'discrimination', label: 'Discrimination' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'negligence', label: 'Negligence' },
+  { value: 'unlawful_arrest', label: 'Unlawful Arrest' },
+  { value: 'abuse_of_power', label: 'Abuse of Power' },
+  { value: 'property_damage', label: 'Property Damage' },
+  { value: 'unprofessional_conduct', label: 'Unprofessional Conduct' },
+  { value: 'delayed_response', label: 'Delayed Response' },
   { value: 'other', label: 'Other' },
+] as const;
+
+/* ── Severity levels ── */
+export const severityLevels = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'critical', label: 'Critical' },
 ] as const;
 
 /* ── Nigerian states ── */
@@ -83,26 +80,88 @@ export const nigerianStates = [
   'Zamfara',
 ] as const;
 
+/* ── Zod schema for public complaint submission ── */
+export const complaintSchema = z.object({
+  title: z
+    .string()
+    .min(5, 'Title must be at least 5 characters')
+    .max(200, 'Title must be under 200 characters'),
+  complainantName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(120, 'Full name must be under 120 characters'),
+  complainantEmail: z.string().email('Enter a valid email address'),
+  complainantPhone: z
+    .string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(15, 'Phone number must be under 15 digits')
+    .regex(/^[0-9+\-\s]+$/, 'Enter a valid phone number'),
+  incidentLocation: z.string().min(1, 'Enter the incident location'),
+  incidentDate: z.string().min(1, 'Select the date of the incident'),
+  category: z.string().min(1, 'Select a complaint category'),
+  severity: z.string().optional(),
+  description: z
+    .string()
+    .min(20, 'Describe the incident in at least 20 characters')
+    .max(3000, 'Description must be under 3000 characters'),
+  isAnonymous: z.boolean().optional(),
+  consent: z.literal(true, {
+    message: 'You must agree to submit your complaint',
+  }),
+});
+
+export type ComplaintFormData = z.infer<typeof complaintSchema>;
+
 /* ── API response types ── */
 export interface ComplaintSubmissionResponse {
-  trackingId: string;
+  success: boolean;
   message: string;
+  correlationId: string;
+  data: {
+    createdBy: null|{ id: string; firstName: string; lastName: string };
+    referenceNumber: string;
+    title: string;
+    description: string;
+    status: ComplaintStatus;
+    severity: string;
+    category: string;
+    source: string;
+    channel: string;
+    isAnonymous: boolean;
+    citizenUserId: null|string;
+    complainantNameEncrypted: string;
+    complainantEmailEncrypted: string;
+    complainantPhoneEncrypted: string;
+    complainantAddressEncrypted: null|string;
+    incidentDate: string;
+    incidentLocation: string;
+    stationId: null|string;
+    trackingToken: string;
+    idempotencyKey: null|string;
+    updatedBy: null|string;
+    resolutionSummary: null|string;
+    closedAt: null|string;
+    slaDueDate: null|string;
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    isOverdue: boolean;
+    version: number;
+  };
 }
 
-export type ComplaintStatus =
-  | 'received'
-  | 'under-review'
-  | 'investigating'
-  | 'resolved'
-  | 'dismissed';
-
 export interface ComplaintResult {
-  trackingId: string;
+  id: string;
+  reference: string;
+  title: string;
+  description: string;
   status: ComplaintStatus;
   category: string;
-  policeStation: string;
-  state: string;
-  submittedAt: string;
-  lastUpdated: string;
-  statusHistory: { status: ComplaintStatus; date: string; note: string }[];
+  severity: string;
+  complainantName?: string;
+  incidentDate?: string;
+  incidentLocation?: string;
+  createdAt: string;
+  updatedAt: string;
+  statusHistory?: Array<{ status: ComplaintStatus; createdAt: string; reason?: string; changedBy?: string }>;
 }

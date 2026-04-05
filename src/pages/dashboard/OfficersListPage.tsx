@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import { useOfficers } from '@/hooks/useQueries';
-import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Table, TableHead, TableBody, TableRow, Th, Td } from '@/components/Table';
 import { SkeletonTableRows } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-
-const statusVariant: Record<string, 'success' | 'default' | 'danger'> = {
-  active: 'success',
-  inactive: 'default',
-  suspended: 'danger',
-};
 
 export function OfficersListPage() {
   const [page, setPage] = useState(1);
@@ -31,31 +24,23 @@ export function OfficersListPage() {
               <Th>Badge #</Th>
               <Th>Rank</Th>
               <Th>Station</Th>
-              <Th>Assigned</Th>
-              <Th>Status</Th>
             </TableRow>
           </TableHead>
           <TableBody>
             {isLoading ? (
-              <SkeletonTableRows rows={5} cols={6} />
+              <SkeletonTableRows rows={5} cols={4} />
             ) : data && data.data.length > 0 ? (
               data.data.map((o) => (
                 <TableRow key={o.id}>
-                  <Td className="font-medium">{o.fullName}</Td>
+                  <Td className="font-medium">{o.firstName} {o.lastName}</Td>
                   <Td>{o.badgeNumber}</Td>
                   <Td>{o.rank}</Td>
-                  <Td>{o.stationName}</Td>
-                  <Td>{o.assignedComplaints}</Td>
-                  <Td>
-                    <Badge variant={statusVariant[o.status] ?? 'default'}>
-                      {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
-                    </Badge>
-                  </Td>
+                  <Td>{o.station?.name ?? '—'}</Td>
                 </TableRow>
               ))
             ) : (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={4}>
                   <EmptyState title="No officers found" />
                 </td>
               </tr>

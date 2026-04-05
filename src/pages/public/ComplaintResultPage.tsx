@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Badge, Button, Card, Skeleton, ErrorState } from '@/components';
 import type { ComplaintResult, ComplaintStatus } from '@/types/complaint';
+import { trackComplaint } from '@/services/api';
 
 const statusBadge: Record<
   ComplaintStatus,
@@ -10,11 +11,18 @@ const statusBadge: Record<
     label: string;
   }
 > = {
-  received: { variant: 'primary', label: 'Received' },
-  'under-review': { variant: 'accent', label: 'Under Review' },
-  investigating: { variant: 'warning', label: 'Investigating' },
+  draft: { variant: 'default', label: 'Draft' },
+  submitted: { variant: 'primary', label: 'Submitted' },
+  acknowledged: { variant: 'primary', label: 'Acknowledged' },
+  under_review: { variant: 'warning', label: 'Under Review' },
+  assigned: { variant: 'accent', label: 'Assigned' },
+  under_investigation: { variant: 'accent', label: 'Investigating' },
+  awaiting_response: { variant: 'warning', label: 'Awaiting Response' },
+  escalated: { variant: 'danger', label: 'Escalated' },
   resolved: { variant: 'success', label: 'Resolved' },
-  dismissed: { variant: 'danger', label: 'Dismissed' },
+  closed: { variant: 'default', label: 'Closed' },
+  rejected: { variant: 'danger', label: 'Rejected' },
+  withdrawn: { variant: 'default', label: 'Withdrawn' },
 };
 
 export function ComplaintResultPage() {
@@ -26,17 +34,11 @@ export function ComplaintResultPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchComplaint() {
+    async function fetchResult() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/complaints/${trackingId}`);
-        if (!res.ok) {
-          if (res.status === 404)
-            throw new Error('Complaint not found. Please check your tracking ID.');
-          throw new Error('Failed to fetch complaint details.');
-        }
-        const data: ComplaintResult = await res.json();
+        const data = await trackComplaint(trackingId ?? '');
         if (!cancelled) setComplaint(data);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Unexpected error');
@@ -45,7 +47,7 @@ export function ComplaintResultPage() {
       }
     }
 
-    fetchComplaint();
+    fetchResult();
     return () => {
       cancelled = true;
     };
@@ -78,14 +80,14 @@ export function ComplaintResultPage() {
     );
   }
 
-  const badge = statusBadge[complaint.status];
+  const badge = statusBadge[complaint.status] ?? { variant: 'default' as const, label: complaint.status };
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-10">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-500">Tracking ID</p>
-          <h1 className="text-xl font-bold text-gray-900">{complaint.trackingId}</h1>
+          <p className="text-sm text-gray-500">Reference</p>
+          <h1 className="text-xl font-bold text-gray-900">{complaint.reference}</h1>
         </div>
         <Badge variant={badge.variant}>{badge.label}</Badge>
       </div>
@@ -94,52 +96,60 @@ export function ComplaintResultPage() {
       <Card className="mt-6" padding="md">
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
+            <dt className="font-medium text-gray-500">Title</dt>
+            <dd className="mt-1 text-gray-900">{complaint.title}</dd>
+          </div>
+          <div>
             <dt className="font-medium text-gray-500">Category</dt>
             <dd className="mt-1 text-gray-900">{complaint.category}</dd>
           </div>
-          <div>
-            <dt className="font-medium text-gray-500">Police Station</dt>
-            <dd className="mt-1 text-gray-900">{complaint.policeStation}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-500">State</dt>
-            <dd className="mt-1 text-gray-900">{complaint.state}</dd>
-          </div>
+          {complaint.severity && (
+            <div>
+              <dt className="font-medium text-gray-500">Severity</dt>
+              <dd className="mt-1 text-gray-900 capitalize">{complaint.severity}</dd>
+            </div>
+          )}
+          {complaint.incidentLocation && (
+            <div>
+              <dt className="font-medium text-gray-500">Incident Location</dt>
+              <dd className="mt-1 text-gray-900">{complaint.incidentLocation}</dd>
+            </div>
+          )}
           <div>
             <dt className="font-medium text-gray-500">Submitted</dt>
             <dd className="mt-1 text-gray-900">
-              {new Date(complaint.submittedAt).toLocaleDateString()}
+              {new Date(complaint.createdAt).toLocaleDateString()}
             </dd>
           </div>
           <div>
             <dt className="font-medium text-gray-500">Last Updated</dt>
             <dd className="mt-1 text-gray-900">
-              {new Date(complaint.lastUpdated).toLocaleDateString()}
+              {new Date(complaint.updatedAt).toLocaleDateString()}
             </dd>
           </div>
         </dl>
       </Card>
 
       {/* Status Timeline */}
-      {complaint.statusHistory.length > 0 && (
+      {complaint.statusHistory && complaint.statusHistory.length > 0 && (
         <Card className="mt-6" padding="md">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-primary-700">
             Status History
           </h2>
           <ol className="relative border-l border-gray-200 pl-6">
             {complaint.statusHistory.map((entry, i) => {
-              const entryBadge = statusBadge[entry.status];
+              const entryBadge = statusBadge[entry.status] ?? { variant: 'default' as const, label: entry.status };
               return (
                 <li key={i} className="mb-6 last:mb-0">
                   <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-primary-500" />
                   <div className="flex items-center gap-2">
                     <Badge variant={entryBadge.variant}>{entryBadge.label}</Badge>
                     <time className="text-xs text-gray-400">
-                      {new Date(entry.date).toLocaleDateString()}
+                      {new Date(entry.createdAt).toLocaleDateString()}
                     </time>
                   </div>
-                  {entry.note && (
-                    <p className="mt-1 text-sm text-gray-600">{entry.note}</p>
+                  {entry.reason && (
+                    <p className="mt-1 text-sm text-gray-600">{entry.reason}</p>
                   )}
                 </li>
               );

@@ -13,11 +13,18 @@ const statusBadge: Record<
     variant: 'default' | 'primary' | 'accent' | 'success' | 'warning' | 'danger';
   }
 > = {
-  received: { label: 'Received', variant: 'default' },
-  'under-review': { label: 'Under Review', variant: 'warning' },
-  investigating: { label: 'Investigating', variant: 'accent' },
+  draft: { label: 'Draft', variant: 'default' },
+  submitted: { label: 'Submitted', variant: 'primary' },
+  acknowledged: { label: 'Acknowledged', variant: 'primary' },
+  under_review: { label: 'Under Review', variant: 'warning' },
+  assigned: { label: 'Assigned', variant: 'accent' },
+  under_investigation: { label: 'Investigating', variant: 'accent' },
+  awaiting_response: { label: 'Awaiting Response', variant: 'warning' },
+  escalated: { label: 'Escalated', variant: 'danger' },
   resolved: { label: 'Resolved', variant: 'success' },
-  dismissed: { label: 'Dismissed', variant: 'danger' },
+  closed: { label: 'Closed', variant: 'default' },
+  rejected: { label: 'Rejected', variant: 'danger' },
+  withdrawn: { label: 'Withdrawn', variant: 'default' },
 };
 
 export function DashboardOverviewPage() {
@@ -76,7 +83,7 @@ export function DashboardOverviewPage() {
         ) : (
           <div className="divide-y divide-gray-100">
             {data.recentComplaints.map((c) => {
-              const badge = statusBadge[c.status];
+              const badge = statusBadge[c.status] ?? { label: c.status, variant: 'default' as const };
               return (
                 <Link
                   key={c.id}
@@ -85,10 +92,10 @@ export function DashboardOverviewPage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">
-                      {c.trackingId}
+                      {c.reference}
                     </p>
                     <p className="truncate text-xs text-gray-500">
-                      {c.category} — {c.policeStation}
+                      {c.category} — {c.title}
                     </p>
                   </div>
                   <Badge variant={badge.variant}>{badge.label}</Badge>

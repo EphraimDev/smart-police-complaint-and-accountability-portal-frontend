@@ -11,30 +11,48 @@ import type { ComplaintStatus } from '@/types/complaint';
 
 const statusVariant: Record<
   ComplaintStatus,
-  'default' | 'warning' | 'accent' | 'success' | 'danger'
+  'default' | 'warning' | 'accent' | 'success' | 'danger' | 'primary'
 > = {
-  received: 'default',
-  'under-review': 'warning',
-  investigating: 'accent',
+  draft: 'default',
+  submitted: 'primary',
+  acknowledged: 'primary',
+  under_review: 'warning',
+  assigned: 'accent',
+  under_investigation: 'accent',
+  awaiting_response: 'warning',
+  escalated: 'danger',
   resolved: 'success',
-  dismissed: 'danger',
+  closed: 'default',
+  rejected: 'danger',
+  withdrawn: 'default',
 };
 
 const statusLabel: Record<ComplaintStatus, string> = {
-  received: 'Received',
-  'under-review': 'Under Review',
-  investigating: 'Investigating',
+  draft: 'Draft',
+  submitted: 'Submitted',
+  acknowledged: 'Acknowledged',
+  under_review: 'Under Review',
+  assigned: 'Assigned',
+  under_investigation: 'Investigating',
+  awaiting_response: 'Awaiting Response',
+  escalated: 'Escalated',
   resolved: 'Resolved',
-  dismissed: 'Dismissed',
+  closed: 'Closed',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
 };
 
 const filterOptions: { value: string; label: string }[] = [
   { value: '', label: 'All Statuses' },
-  { value: 'received', label: 'Received' },
-  { value: 'under-review', label: 'Under Review' },
-  { value: 'investigating', label: 'Investigating' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'acknowledged', label: 'Acknowledged' },
+  { value: 'under_review', label: 'Under Review' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'under_investigation', label: 'Investigating' },
+  { value: 'escalated', label: 'Escalated' },
   { value: 'resolved', label: 'Resolved' },
-  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'rejected', label: 'Rejected' },
 ];
 
 export function ComplaintsListPage() {
@@ -88,15 +106,15 @@ export function ComplaintsListPage() {
             ) : data && data.data.length > 0 ? (
               data.data.map((c) => (
                 <TableRow key={c.id}>
-                  <Td className="font-medium">{c.trackingId}</Td>
+                  <Td className="font-medium">{c.reference}</Td>
                   <Td>{c.category}</Td>
-                  <Td>{c.policeStation}</Td>
+                  <Td>{c.station?.name ?? '—'}</Td>
                   <Td>
-                    <Badge variant={statusVariant[c.status]}>
-                      {statusLabel[c.status]}
+                    <Badge variant={statusVariant[c.status] ?? 'default'}>
+                      {statusLabel[c.status] ?? c.status}
                     </Badge>
                   </Td>
-                  <Td>{new Date(c.submittedAt).toLocaleDateString()}</Td>
+                  <Td>{new Date(c.createdAt).toLocaleDateString()}</Td>
                   <Td>
                     <Link
                       to={`/dashboard/complaints/${c.id}`}

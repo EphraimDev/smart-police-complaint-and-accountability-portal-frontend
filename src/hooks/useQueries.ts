@@ -5,6 +5,9 @@ import {
   fetchComplaint,
   assignComplaint,
   updateComplaintStatus,
+  fetchComplaintTimeline,
+  fetchComplaintNotes,
+  addComplaintNote,
   fetchOfficers,
   fetchOfficer,
   fetchStations,
@@ -12,9 +15,10 @@ import {
   fetchUsers,
   createUser,
   updateUser,
-  deleteUser,
+  deactivateUser,
   updateProfile,
   changePassword,
+  fetchStatusHistory,
 } from '@/services/api';
 import type { AssignComplaintPayload, UpdateStatusPayload } from '@/types/dashboard';
 import type {
@@ -30,6 +34,9 @@ export const queryKeys = {
   dashboardStats: ['dashboard', 'stats'] as const,
   complaints: (page: number, status?: string) => ['complaints', page, status] as const,
   complaint: (id: string) => ['complaints', id] as const,
+  complaintTimeline: (id: string) => ['complaints', id, 'timeline'] as const,
+  complaintNotes: (id: string) => ['complaints', id, 'notes'] as const,
+  complaintHistory: (id: string) => ['complaints', id, 'history'] as const,
   officers: (page: number) => ['officers', page] as const,
   officer: (id: string) => ['officers', id] as const,
   stations: (page: number) => ['stations', page] as const,
@@ -52,7 +59,7 @@ export function useDashboardStats() {
 export function useComplaints(page = 1, status?: string) {
   return useQuery({
     queryKey: queryKeys.complaints(page, status),
-    queryFn: () => fetchComplaints(page, status),
+    queryFn: () => fetchComplaints(page, 20, status ? { status } : undefined),
   });
 }
 
@@ -64,11 +71,34 @@ export function useComplaint(id: string) {
   });
 }
 
+export function useComplaintTimeline(id: string) {
+  return useQuery({
+    queryKey: queryKeys.complaintTimeline(id),
+    queryFn: () => fetchComplaintTimeline(id),
+    enabled: !!id,
+  });
+}
+
+export function useComplaintNotes(id: string) {
+  return useQuery({
+    queryKey: queryKeys.complaintNotes(id),
+    queryFn: () => fetchComplaintNotes(id),
+    enabled: !!id,
+  });
+}
+
+export function useStatusHistory(id: string) {
+  return useQuery({
+    queryKey: queryKeys.complaintHistory(id),
+    queryFn: () => fetchStatusHistory(id),
+    enabled: !!id,
+  });
+}
+
 export function useAssignComplaint(complaintId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: AssignComplaintPayload) =>
-      assignComplaint(complaintId, payload),
+    mutationFn: (payload: AssignComplaintPayload) => assignComplaint(payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.complaint(complaintId) });
     },
@@ -82,6 +112,18 @@ export function useUpdateComplaintStatus(complaintId: string) {
       updateComplaintStatus(complaintId, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.complaint(complaintId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.complaintHistory(complaintId) });
+    },
+  });
+}
+
+export function useAddComplaintNote(complaintId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { content: string; isInternal?: boolean }) =>
+      addComplaintNote(complaintId, payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.complaintNotes(complaintId) });
     },
   });
 }
@@ -150,10 +192,10 @@ export function useUpdateUser(userId: string) {
   });
 }
 
-export function useDeleteUser() {
+export function useDeactivateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (userId: string) => deleteUser(userId),
+    mutationFn: (userId: string) => deactivateUser(userId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
     },

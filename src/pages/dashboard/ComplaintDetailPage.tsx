@@ -5,6 +5,7 @@ import {
   useAssignComplaint,
   useUpdateComplaintStatus,
   useOfficers,
+  useStatusHistory,
 } from '@/hooks/useQueries';
 import { Card, CardHeader, CardBody } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -15,26 +16,40 @@ import { Textarea } from '@/components/Textarea';
 import { Skeleton } from '@/components/Skeleton';
 import { ErrorState } from '@/components/ErrorState';
 import type { ComplaintStatus } from '@/types/complaint';
-import type { StatusHistoryEntry, EvidenceItem } from '@/types/dashboard';
+import type { StatusHistoryEntry } from '@/types/dashboard';
 
 /* ── Status helpers ── */
 const statusVariant: Record<
   ComplaintStatus,
-  'default' | 'warning' | 'accent' | 'success' | 'danger'
+  'default' | 'warning' | 'accent' | 'success' | 'danger' | 'primary'
 > = {
-  received: 'default',
-  'under-review': 'warning',
-  investigating: 'accent',
+  draft: 'default',
+  submitted: 'primary',
+  acknowledged: 'primary',
+  under_review: 'warning',
+  assigned: 'accent',
+  under_investigation: 'accent',
+  awaiting_response: 'warning',
+  escalated: 'danger',
   resolved: 'success',
-  dismissed: 'danger',
+  closed: 'default',
+  rejected: 'danger',
+  withdrawn: 'default',
 };
 
 const statusLabel: Record<ComplaintStatus, string> = {
-  received: 'Received',
-  'under-review': 'Under Review',
-  investigating: 'Investigating',
+  draft: 'Draft',
+  submitted: 'Submitted',
+  acknowledged: 'Acknowledged',
+  under_review: 'Under Review',
+  assigned: 'Assigned',
+  under_investigation: 'Investigating',
+  awaiting_response: 'Awaiting Response',
+  escalated: 'Escalated',
   resolved: 'Resolved',
-  dismissed: 'Dismissed',
+  closed: 'Closed',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
 };
 
 const statusOptions = Object.entries(statusLabel).map(([value, label]) => ({
@@ -70,11 +85,11 @@ export function ComplaintDetailPage() {
             &larr; Back to complaints
           </Link>
           <h1 className="mt-1 text-2xl font-bold text-gray-900">
-            {complaint.trackingId}
+            {complaint.reference}
           </h1>
         </div>
-        <Badge variant={statusVariant[complaint.status]}>
-          {statusLabel[complaint.status]}
+        <Badge variant={statusVariant[complaint.status] ?? 'default'}>
+          {statusLabel[complaint.status] ?? complaint.status}
         </Badge>
       </div>
 
@@ -88,20 +103,21 @@ export function ComplaintDetailPage() {
             </CardHeader>
             <CardBody>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Dd label="Title" value={complaint.title} />
                 <Dd label="Category" value={complaint.category} />
-                <Dd label="Status" value={statusLabel[complaint.status]} />
-                <Dd label="Police Station" value={complaint.policeStation} />
-                <Dd label="State" value={complaint.state} />
-                <Dd label="LGA" value={complaint.lga} />
-                <Dd
-                  label="Incident Date"
-                  value={new Date(complaint.incidentDate).toLocaleDateString()}
-                />
-                {complaint.officerName && (
-                  <Dd label="Officer Named" value={complaint.officerName} />
+                <Dd label="Status" value={statusLabel[complaint.status] ?? complaint.status} />
+                <Dd label="Severity" value={complaint.severity ?? '—'} />
+                {complaint.station && (
+                  <Dd label="Police Station" value={complaint.station.name} />
                 )}
-                {complaint.officerBadgeNumber && (
-                  <Dd label="Badge Number" value={complaint.officerBadgeNumber} />
+                {complaint.incidentLocation && (
+                  <Dd label="Incident Location" value={complaint.incidentLocation} />
+                )}
+                {complaint.incidentDate && (
+                  <Dd
+                    label="Incident Date"
+                    value={new Date(complaint.incidentDate).toLocaleDateString()}
+                  />
                 )}
               </dl>
               <div className="mt-4 border-t border-gray-100 pt-4">
@@ -120,25 +136,22 @@ export function ComplaintDetailPage() {
             </CardHeader>
             <CardBody>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Dd label="Full Name" value={complaint.fullName} />
-                <Dd label="Email" value={complaint.email} />
-                <Dd label="Phone" value={complaint.phone} />
+                <Dd label="Name" value={complaint.complainantName ?? (complaint.isAnonymous ? 'Anonymous' : '—')} />
+                <Dd label="Email" value={complaint.complainantEmail ?? '—'} />
+                <Dd label="Phone" value={complaint.complainantPhone ?? '—'} />
               </dl>
             </CardBody>
           </Card>
 
-          {/* Evidence */}
-          <EvidenceSection evidence={complaint.evidence} />
-
           {/* Timeline */}
-          <StatusTimeline history={complaint.statusHistory} />
+          <StatusTimeline complaintId={complaint.id} />
         </div>
 
         {/* Right column – actions */}
         <div className="space-y-6">
           <AssignmentPanel
             complaintId={complaint.id}
-            assignedOfficerName={complaint.assignedOfficerName}
+            assignedInvestigator={complaint.assignedInvestigator}
           />
           <UpdateStatusPanel
             complaintId={complaint.id}
@@ -161,7 +174,22 @@ function Dd({ label, value }: { label: string; value: string }) {
 }
 
 /* ── Status Timeline ── */
-function StatusTimeline({ history }: { history: StatusHistoryEntry[] }) {
+function StatusTimeline({ complaintId }: { complaintId: string }) {
+  const { data: history } = useStatusHistory(complaintId);
+
+  if (!history || history.length === 0) {
+    return (
+      <Card padding="none">
+        <CardHeader>
+          <h2 className="font-semibold text-gray-900">Status Timeline</h2>
+        </CardHeader>
+        <CardBody>
+          <p className="text-sm text-gray-500">No status history available.</p>
+        </CardBody>
+      </Card>
+    );
+  }
+
   return (
     <Card padding="none">
       <CardHeader>
@@ -169,20 +197,24 @@ function StatusTimeline({ history }: { history: StatusHistoryEntry[] }) {
       </CardHeader>
       <CardBody>
         <ol className="relative border-l border-gray-200 pl-6">
-          {history.map((entry, i) => (
-            <li key={i} className="mb-6 last:mb-0">
+          {history.map((entry: StatusHistoryEntry) => (
+            <li key={entry.id} className="mb-6 last:mb-0">
               <span className="absolute -left-1.5 h-3 w-3 rounded-full border-2 border-white bg-primary-500" />
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={statusVariant[entry.status]}>
-                  {statusLabel[entry.status]}
+                <Badge variant={statusVariant[entry.status] ?? 'default'}>
+                  {statusLabel[entry.status] ?? entry.status}
                 </Badge>
                 <time className="text-xs text-gray-400">
-                  {new Date(entry.date).toLocaleString()}
+                  {new Date(entry.createdAt).toLocaleString()}
                 </time>
               </div>
-              <p className="mt-1 text-sm text-gray-700">{entry.note}</p>
-              {entry.updatedBy && (
-                <p className="mt-0.5 text-xs text-gray-400">by {entry.updatedBy}</p>
+              {entry.reason && (
+                <p className="mt-1 text-sm text-gray-700">{entry.reason}</p>
+              )}
+              {entry.changedBy && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                  by {entry.changedBy.firstName} {entry.changedBy.lastName}
+                </p>
               )}
             </li>
           ))}
@@ -192,62 +224,27 @@ function StatusTimeline({ history }: { history: StatusHistoryEntry[] }) {
   );
 }
 
-/* ── Evidence UI ── */
-function EvidenceSection({ evidence }: { evidence: EvidenceItem[] }) {
-  if (evidence.length === 0) return null;
-
-  return (
-    <Card padding="none">
-      <CardHeader>
-        <h2 className="font-semibold text-gray-900">Evidence ({evidence.length})</h2>
-      </CardHeader>
-      <CardBody>
-        <ul className="divide-y divide-gray-100">
-          {evidence.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-gray-900">{e.fileName}</p>
-                <p className="text-xs text-gray-500">
-                  {e.fileType} — {(e.fileSize / 1024).toFixed(0)} KB —{' '}
-                  {new Date(e.uploadedAt).toLocaleDateString()}
-                </p>
-              </div>
-              <a
-                href={e.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-4 shrink-0 text-sm font-medium text-primary-700 hover:text-primary-800"
-              >
-                Download
-              </a>
-            </li>
-          ))}
-        </ul>
-      </CardBody>
-    </Card>
-  );
-}
-
 /* ── Assignment Panel ── */
 function AssignmentPanel({
   complaintId,
-  assignedOfficerName,
+  assignedInvestigator,
 }: {
   complaintId: string;
-  assignedOfficerName?: string;
+  assignedInvestigator?: { id: string; firstName: string; lastName: string } | null;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedOfficer, setSelectedOfficer] = useState('');
   const { data: officersData } = useOfficers(1);
   const assignMutation = useAssignComplaint(complaintId);
 
+  const assignedName = assignedInvestigator
+    ? `${assignedInvestigator.firstName} ${assignedInvestigator.lastName}`
+    : null;
+
   const handleAssign = () => {
     if (!selectedOfficer) return;
     assignMutation.mutate(
-      { officerId: selectedOfficer },
+      { complaintId, assigneeId: selectedOfficer },
       {
         onSuccess: () => {
           setOpen(false);
@@ -263,9 +260,9 @@ function AssignmentPanel({
         <h2 className="font-semibold text-gray-900">Assignment</h2>
       </CardHeader>
       <CardBody>
-        {assignedOfficerName ? (
+        {assignedName ? (
           <p className="text-sm text-gray-700">
-            Assigned to <span className="font-medium">{assignedOfficerName}</span>
+            Assigned to <span className="font-medium">{assignedName}</span>
           </p>
         ) : (
           <p className="text-sm text-gray-500">Not yet assigned</p>
@@ -276,7 +273,7 @@ function AssignmentPanel({
           className="mt-3"
           onClick={() => setOpen(true)}
         >
-          {assignedOfficerName ? 'Reassign' : 'Assign Officer'}
+          {assignedName ? 'Reassign' : 'Assign Officer'}
         </Button>
       </CardBody>
 
@@ -288,7 +285,7 @@ function AssignmentPanel({
             options={
               officersData?.data.map((o) => ({
                 value: o.id,
-                label: `${o.fullName} (${o.badgeNumber})`,
+                label: `${o.firstName} ${o.lastName} (${o.badgeNumber})`,
               })) ?? []
             }
             value={selectedOfficer}
@@ -323,18 +320,18 @@ function UpdateStatusPanel({
 }) {
   const [open, setOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
-  const [note, setNote] = useState('');
+  const [reason, setReason] = useState('');
   const updateMutation = useUpdateComplaintStatus(complaintId);
 
   const handleUpdate = () => {
-    if (!newStatus || !note) return;
+    if (!newStatus || !reason) return;
     updateMutation.mutate(
-      { status: newStatus as ComplaintStatus, note },
+      { status: newStatus as ComplaintStatus, reason },
       {
         onSuccess: () => {
           setOpen(false);
           setNewStatus('');
-          setNote('');
+          setReason('');
         },
       },
     );
@@ -348,8 +345,8 @@ function UpdateStatusPanel({
       <CardBody>
         <p className="text-sm text-gray-700">
           Current:{' '}
-          <Badge variant={statusVariant[currentStatus]}>
-            {statusLabel[currentStatus]}
+          <Badge variant={statusVariant[currentStatus] ?? 'default'}>
+            {statusLabel[currentStatus] ?? currentStatus}
           </Badge>
         </p>
         <Button
@@ -372,10 +369,10 @@ function UpdateStatusPanel({
             onChange={(e) => setNewStatus(e.target.value)}
           />
           <Textarea
-            label="Note"
+            label="Reason"
             placeholder="Reason for status change…"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
             rows={3}
           />
           <div className="flex justify-end gap-2">
@@ -386,7 +383,7 @@ function UpdateStatusPanel({
               size="sm"
               onClick={handleUpdate}
               loading={updateMutation.isPending}
-              disabled={!newStatus || !note}
+              disabled={!newStatus || !reason}
             >
               Update
             </Button>

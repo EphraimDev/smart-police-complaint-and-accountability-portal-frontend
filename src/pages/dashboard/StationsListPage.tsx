@@ -21,30 +21,28 @@ export function StationsListPage() {
           <TableHead>
             <TableRow>
               <Th>Station Name</Th>
-              <Th>State</Th>
-              <Th>LGA</Th>
-              <Th>Officers</Th>
-              <Th>Complaints</Th>
+              <Th>Code</Th>
+              <Th>Region</Th>
               <Th>Phone</Th>
+              <Th>Email</Th>
             </TableRow>
           </TableHead>
           <TableBody>
             {isLoading ? (
-              <SkeletonTableRows rows={5} cols={6} />
+              <SkeletonTableRows rows={5} cols={5} />
             ) : data && data.data.length > 0 ? (
               data.data.map((s) => (
                 <TableRow key={s.id}>
                   <Td className="font-medium">{s.name}</Td>
-                  <Td>{s.state}</Td>
-                  <Td>{s.lga}</Td>
-                  <Td>{s.officerCount}</Td>
-                  <Td>{s.complaintCount}</Td>
-                  <Td>{s.phone}</Td>
+                  <Td>{s.code ?? '—'}</Td>
+                  <Td>{s.region ?? '—'}</Td>
+                  <Td>{s.phone ?? '—'}</Td>
+                  <Td>{s.email ?? '—'}</Td>
                 </TableRow>
               ))
             ) : (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={5}>
                   <EmptyState title="No stations found" />
                 </td>
               </tr>

@@ -7,14 +7,17 @@ import type {
   Officer,
   Station,
   PaginatedResponse,
+  StatusHistoryEntry,
 } from '@/types/dashboard';
-import type { ReportsData, AdminUser } from '@/types/reports';
+import type { AdminUser } from '@/types/reports';
 
 /* ── Mock auth data ── */
 const mockUser: AuthUser = {
   id: 'usr-001',
   email: 'admin@npf.gov.ng',
   fullName: 'Superintendent Abubakar',
+  firstName: 'Superintendent',
+  lastName: 'Abubakar',
   role: 'admin',
 };
 
@@ -22,27 +25,23 @@ const mockUser: AuthUser = {
 const mockOfficers: Officer[] = [
   {
     id: 'off-001',
-    fullName: 'Inspector Chukwu',
+    firstName: 'Emeka',
+    lastName: 'Chukwu',
     badgeNumber: 'NPF-4421',
     rank: 'Inspector',
-    email: 'chukwu@npf.gov.ng',
-    phone: '08012345678',
     stationId: 'st-001',
-    stationName: 'Ikeja Division',
-    assignedComplaints: 3,
-    status: 'active',
+    station: { id: 'st-001', name: 'Ikeja Division' },
+    createdAt: '2025-01-15T00:00:00Z',
   },
   {
     id: 'off-002',
-    fullName: 'Sergeant Abdullahi',
+    firstName: 'Ibrahim',
+    lastName: 'Abdullahi',
     badgeNumber: 'NPF-3312',
     rank: 'Sergeant',
-    email: 'abdullahi@npf.gov.ng',
-    phone: '08098765432',
     stationId: 'st-002',
-    stationName: 'Wuse Division',
-    assignedComplaints: 1,
-    status: 'active',
+    station: { id: 'st-002', name: 'Wuse Division' },
+    createdAt: '2025-03-10T00:00:00Z',
   },
 ];
 
@@ -51,79 +50,63 @@ const mockStations: Station[] = [
   {
     id: 'st-001',
     name: 'Ikeja Division',
-    state: 'Lagos',
-    lga: 'Ikeja',
+    code: 'IKJ-001',
     address: '12 Toyin Street, Ikeja, Lagos',
+    region: 'Lagos',
     phone: '01-2345678',
-    officerCount: 45,
-    complaintCount: 12,
+    email: 'ikeja@npf.gov.ng',
+    createdAt: '2024-01-01T00:00:00Z',
   },
   {
     id: 'st-002',
     name: 'Wuse Division',
-    state: 'FCT',
-    lga: 'Wuse',
+    code: 'WSE-001',
     address: '5 Aminu Kano Crescent, Wuse II, Abuja',
+    region: 'FCT',
     phone: '09-8765432',
-    officerCount: 32,
-    complaintCount: 8,
+    email: 'wuse@npf.gov.ng',
+    createdAt: '2024-01-01T00:00:00Z',
   },
 ];
 
 /* ── Mock internal complaint ── */
 const mockInternalComplaint: InternalComplaint = {
   id: 'cmp-001',
-  trackingId: 'NPF-2026-AB12X',
-  fullName: 'Emeka Okonkwo',
-  email: 'emeka@example.com',
-  phone: '08011112222',
-  state: 'Lagos',
-  lga: 'Ikeja',
-  policeStation: 'Ikeja Division',
-  officerName: 'Inspector Chukwu',
-  officerBadgeNumber: 'NPF-4421',
+  reference: 'NPF-2026-AB12X',
+  title: 'Extortion at checkpoint',
+  complainantName: 'Emeka Okonkwo',
+  complainantEmail: 'emeka@example.com',
+  complainantPhone: '08011112222',
   incidentDate: '2026-03-25',
-  category: 'Extortion / Bribery',
+  incidentLocation: 'Ikeja, Lagos',
+  category: 'corruption',
+  severity: 'medium',
   description:
     'Officer demanded payment at checkpoint without issuing any ticket or receipt.',
-  status: 'under-review',
-  assignedTo: 'off-001',
-  assignedOfficerName: 'Inspector Chukwu',
-  submittedAt: '2026-03-28T10:30:00Z',
-  lastUpdated: '2026-04-02T14:00:00Z',
-  statusHistory: [
-    {
-      status: 'received',
-      date: '2026-03-28T10:30:00Z',
-      note: 'Complaint received and logged.',
-      updatedBy: 'system',
-    },
-    {
-      status: 'under-review',
-      date: '2026-04-02T14:00:00Z',
-      note: 'Assigned to oversight unit for preliminary review.',
-      updatedBy: 'Superintendent Abubakar',
-    },
-  ],
-  evidence: [
-    {
-      id: 'ev-001',
-      fileName: 'receipt-photo.jpg',
-      fileType: 'image/jpeg',
-      fileSize: 245000,
-      uploadedAt: '2026-03-28T10:32:00Z',
-      url: '/uploads/receipt-photo.jpg',
-    },
-    {
-      id: 'ev-002',
-      fileName: 'witness-statement.pdf',
-      fileType: 'application/pdf',
-      fileSize: 120000,
-      uploadedAt: '2026-03-28T10:34:00Z',
-      url: '/uploads/witness-statement.pdf',
-    },
-  ],
+  status: 'under_review',
+  station: { id: 'st-001', name: 'Ikeja Division' },
+  assignedInvestigator: { id: 'off-001', firstName: 'Emeka', lastName: 'Chukwu' },
+  createdAt: '2026-03-28T10:30:00Z',
+  updatedAt: '2026-04-02T14:00:00Z',
 };
+
+/* ── Mock status history ── */
+const mockStatusHistory: StatusHistoryEntry[] = [
+  {
+    id: 'sh-001',
+    status: 'submitted',
+    reason: 'Complaint received and logged.',
+    changedBy: { id: 'usr-sys', firstName: 'System', lastName: '' },
+    createdAt: '2026-03-28T10:30:00Z',
+  },
+  {
+    id: 'sh-002',
+    status: 'under_review',
+    reason: 'Assigned to oversight unit for preliminary review.',
+    changedBy: { id: 'usr-001', firstName: 'Superintendent', lastName: 'Abubakar' },
+    createdAt: '2026-04-02T14:00:00Z',
+  },
+];
 
 const mockDashboardStats: DashboardStats = {
   totalComplaints: 156,
@@ -135,67 +118,86 @@ const mockDashboardStats: DashboardStats = {
   recentComplaints: [mockInternalComplaint],
 };
 
-/* ── Mock complaint data ── */
+/* ── Mock complaint result (public tracking) ── */
 const mockComplaintResult: ComplaintResult = {
-  trackingId: 'NPF-2026-AB12X',
-  status: 'under-review',
-  category: 'Extortion / Bribery',
-  policeStation: 'Ikeja Division',
-  state: 'Lagos',
-  submittedAt: '2026-03-28T10:30:00Z',
-  lastUpdated: '2026-04-02T14:00:00Z',
+  id: 'cmp-001',
+  reference: 'NPF-2026-AB12X',
+  title: 'Extortion at checkpoint',
+  status: 'under_review',
+  category: 'corruption',
+  severity: 'medium',
+  description:
+    'Officer demanded payment at checkpoint without issuing any ticket or receipt.',
+  incidentLocation: 'Ikeja, Lagos',
+  createdAt: '2026-03-28T10:30:00Z',
+  updatedAt: '2026-04-02T14:00:00Z',
   statusHistory: [
-    {
-      status: 'received',
-      date: '2026-03-28T10:30:00Z',
-      note: 'Complaint received and logged.',
-    },
-    {
-      status: 'under-review',
-      date: '2026-04-02T14:00:00Z',
-      note: 'Assigned to oversight unit for preliminary review.',
-    },
+    { status: 'submitted', createdAt: '2026-03-28T10:30:00Z', reason: 'Complaint received and logged.', changedBy: 'system' },
+    { status: 'under_review', createdAt: '2026-04-02T14:00:00Z', reason: 'Assigned to oversight unit.', changedBy: 'Superintendent Abubakar' },
   ],
 };
 
 /**
- * Default request handlers for MSW.
+ * Default request handlers for MSW — aligned with the real API at /api/v1.
  */
 export const handlers = [
   // Health-check
-  http.get('/api/health', () => {
+  http.get('/api/v1/health', () => {
     return HttpResponse.json({ status: 'ok' });
   }),
 
   // Submit complaint
-  http.post('/api/complaints', async () => {
+  http.post('/api/v1/complaints', async () => {
     const body: ComplaintSubmissionResponse = {
-      trackingId: 'NPF-2026-AB12X',
-      message: 'Complaint submitted successfully.',
+      id: 'cmp-new',
+      reference: 'NPF-2026-XY99Z',
+      trackingToken: 'tok_abc123',
     };
     return HttpResponse.json(body, { status: 201 });
   }),
 
-  // Get complaint by tracking ID
-  http.get('/api/complaints/:trackingId', ({ params }) => {
-    const { trackingId } = params;
-    if (trackingId === 'NPF-2026-AB12X') {
+  // Track complaint (public)
+  http.post('/api/v1/complaints/track', async ({ request }) => {
+    const payload = (await request.json()) as { reference?: string };
+    if (payload.reference === 'NPF-2026-AB12X') {
       return HttpResponse.json(mockComplaintResult);
     }
     return HttpResponse.json({ message: 'Complaint not found' }, { status: 404 });
   }),
 
   // Login
-  http.post('/api/auth/login', async ({ request }) => {
+  http.post('/api/v1/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email?: string; password?: string };
     if (body.email === 'admin@npf.gov.ng' && body.password === 'password123') {
-      const response: LoginResponse = { user: mockUser, token: 'mock-jwt-token' };
+      const response: LoginResponse = {
+        user: mockUser,
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+      };
       return HttpResponse.json(response);
     }
     return HttpResponse.json({ message: 'Invalid email or password' }, { status: 401 });
   }),
 
-  // Forgot password
+  // Refresh token
+  http.post('/api/v1/auth/refresh', async () => {
+    return HttpResponse.json({
+      accessToken: 'mock-refreshed-access-token',
+      refreshToken: 'mock-refreshed-refresh-token',
+    });
+  }),
+
+  // Logout
+  http.post('/api/v1/auth/logout', async () => {
+    return HttpResponse.json({ message: 'Logged out' });
+  }),
+
+  // Change password
+  http.post('/api/v1/auth/change-password', async () => {
+    return HttpResponse.json({ message: 'Password changed successfully.' });
+  }),
+
+  // Forgot password (kept at old path since no API equivalent)
   http.post('/api/auth/forgot-password', async () => {
     const response: ForgotPasswordResponse = {
       message: 'If that email is registered, a reset link has been sent.',
@@ -205,100 +207,114 @@ export const handlers = [
 
   /* ── Dashboard endpoints ── */
 
-  // Dashboard stats
-  http.get('/api/dashboard/stats', () => {
+  // Admin dashboard stats
+  http.get('/api/v1/admin/dashboard', () => {
     return HttpResponse.json(mockDashboardStats);
   }),
 
   // List complaints (paginated)
-  http.get('/api/dashboard/complaints', ({ request }) => {
+  http.get('/api/v1/complaints', ({ request }) => {
     const url = new URL(request.url);
     const page = Number(url.searchParams.get('page') ?? '1');
     const body: PaginatedResponse<InternalComplaint> = {
       data: [mockInternalComplaint],
       total: 1,
       page,
-      pageSize: 10,
+      limit: 10,
       totalPages: 1,
     };
     return HttpResponse.json(body);
   }),
 
   // Get single complaint
-  http.get('/api/dashboard/complaints/:id', ({ params }) => {
+  http.get('/api/v1/complaints/:id', ({ params }) => {
     if (params.id === 'cmp-001') {
       return HttpResponse.json(mockInternalComplaint);
     }
     return HttpResponse.json({ message: 'Complaint not found' }, { status: 404 });
   }),
 
+  // Complaint timeline
+  http.get('/api/v1/complaints/:id/timeline', () => {
+    return HttpResponse.json(mockStatusHistory);
+  }),
+
+  // Complaint notes
+  http.get('/api/v1/complaints/:id/notes', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/v1/complaints/:id/notes', async () => {
+    return HttpResponse.json({ id: 'note-new', content: 'Test note', createdAt: new Date().toISOString() }, { status: 201 });
+  }),
+
+  // Status history
+  http.get('/api/v1/complaint-status-history/complaint/:id', () => {
+    return HttpResponse.json(mockStatusHistory);
+  }),
+
   // Assign complaint
-  http.post('/api/dashboard/complaints/:id/assign', async ({ request }) => {
-    const body = (await request.json()) as { officerId: string };
-    const officer = mockOfficers.find((o) => o.id === body.officerId);
+  http.post('/api/v1/complaint-assignments', async ({ request }) => {
+    const body = (await request.json()) as { complaintId: string; assigneeId: string };
+    const officer = mockOfficers.find((o) => o.id === body.assigneeId);
     return HttpResponse.json({
       ...mockInternalComplaint,
-      assignedTo: body.officerId,
-      assignedOfficerName: officer?.fullName ?? 'Unknown',
+      assignedInvestigator: officer
+        ? { id: officer.id, firstName: officer.firstName, lastName: officer.lastName }
+        : undefined,
     });
   }),
 
   // Update complaint status
-  http.patch('/api/dashboard/complaints/:id/status', async ({ request }) => {
-    const body = (await request.json()) as { status: string; note: string };
+  http.patch('/api/v1/complaints/:id/status', async ({ request }) => {
+    const body = (await request.json()) as { status: string; reason?: string };
     return HttpResponse.json({
       ...mockInternalComplaint,
       status: body.status,
-      statusHistory: [
-        ...mockInternalComplaint.statusHistory,
-        {
-          status: body.status,
-          date: new Date().toISOString(),
-          note: body.note,
-          updatedBy: 'Test User',
-        },
-      ],
     });
   }),
 
   // List officers
-  http.get('/api/dashboard/officers', ({ request }) => {
+  http.get('/api/v1/officers', ({ request }) => {
     const url = new URL(request.url);
     const page = Number(url.searchParams.get('page') ?? '1');
     const body: PaginatedResponse<Officer> = {
       data: mockOfficers,
       total: 2,
       page,
-      pageSize: 10,
+      limit: 10,
       totalPages: 1,
     };
     return HttpResponse.json(body);
   }),
 
-  // Get single officer
-  http.get('/api/dashboard/officers/:id', ({ params }) => {
-    const officer = mockOfficers.find((o) => o.id === params.id);
-    if (officer) return HttpResponse.json(officer);
-    return HttpResponse.json({ message: 'Officer not found' }, { status: 404 });
-  }),
-
   // List stations
-  http.get('/api/dashboard/stations', ({ request }) => {
+  http.get('/api/v1/police-stations', ({ request }) => {
     const url = new URL(request.url);
     const page = Number(url.searchParams.get('page') ?? '1');
     const body: PaginatedResponse<Station> = {
       data: mockStations,
       total: 2,
       page,
-      pageSize: 10,
+      limit: 10,
       totalPages: 1,
     };
     return HttpResponse.json(body);
   }),
 
-  /* ── Reports endpoint ── */
-  http.get('/api/dashboard/reports', () => {
-    const body: ReportsData = {
+  /* ── Reports endpoints ── */
+  http.get('/api/v1/reports/complaints/summary', () => {
+    return HttpResponse.json({
+      totalComplaints: 156,
+      avgResolutionDays: 9,
+      resolutionRate: 63,
+      complaintsThisMonth: 24,
+      changeFromLastMonth: 12,
+    });
+  }),
+
+  http.get('/api/v1/reports/trends', () => {
+    return HttpResponse.json({
       complaintsTrend: [
         { date: '2026-01', count: 12 },
         { date: '2026-02', count: 18 },
@@ -306,20 +322,25 @@ export const handlers = [
         { date: '2026-04', count: 15 },
       ],
       categoryBreakdown: [
-        { category: 'Extortion / Bribery', count: 45, percentage: 29 },
-        { category: 'Physical Assault', count: 30, percentage: 19 },
-        { category: 'Unlawful Detention', count: 22, percentage: 14 },
-        { category: 'Harassment / Intimidation', count: 20, percentage: 13 },
-        { category: 'Negligence of Duty', count: 15, percentage: 10 },
-        { category: 'Other', count: 24, percentage: 15 },
+        { category: 'corruption', count: 45, percentage: 29 },
+        { category: 'excessive_force', count: 30, percentage: 19 },
+        { category: 'unlawful_arrest', count: 22, percentage: 14 },
+        { category: 'harassment', count: 20, percentage: 13 },
+        { category: 'negligence', count: 15, percentage: 10 },
+        { category: 'other', count: 24, percentage: 15 },
       ],
       statusBreakdown: [
-        { status: 'received', count: 23, percentage: 15 },
-        { status: 'under-review', count: 21, percentage: 13 },
-        { status: 'investigating', count: 14, percentage: 9 },
+        { status: 'submitted', count: 23, percentage: 15 },
+        { status: 'under_review', count: 21, percentage: 13 },
+        { status: 'under_investigation', count: 14, percentage: 9 },
         { status: 'resolved', count: 85, percentage: 55 },
-        { status: 'dismissed', count: 13, percentage: 8 },
+        { status: 'rejected', count: 13, percentage: 8 },
       ],
+    });
+  }),
+
+  http.get('/api/v1/reports/complaints/resolution', () => {
+    return HttpResponse.json({
       stationRankings: [
         {
           stationId: 'st-001',
@@ -356,48 +377,54 @@ export const handlers = [
           avgResolutionDays: 12,
         },
       ],
-      summary: {
-        totalComplaints: 156,
-        avgResolutionDays: 9,
-        resolutionRate: 63,
-        complaintsThisMonth: 24,
-        changeFromLastMonth: 12,
-      },
-    };
-    return HttpResponse.json(body);
+    });
+  }),
+
+  http.get('/api/v1/reports/complaints/overdue', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/v1/reports/escalations', () => {
+    return HttpResponse.json([]);
   }),
 
   /* ── Admin: Users ── */
-  http.get('/api/admin/users', ({ request }) => {
+  http.get('/api/v1/users', ({ request }) => {
     const url = new URL(request.url);
     const page = Number(url.searchParams.get('page') ?? '1');
     const mockUsers: AdminUser[] = [
       {
         id: 'usr-001',
+        firstName: 'Superintendent',
+        lastName: 'Abubakar',
         fullName: 'Superintendent Abubakar',
         email: 'admin@npf.gov.ng',
         role: 'admin',
-        status: 'active',
+        isActive: true,
         stationName: 'Force HQ',
         createdAt: '2025-01-15T00:00:00Z',
         lastLoginAt: '2026-04-04T09:00:00Z',
       },
       {
         id: 'usr-002',
-        fullName: 'Inspector Chukwu',
+        firstName: 'Emeka',
+        lastName: 'Chukwu',
+        fullName: 'Emeka Chukwu',
         email: 'chukwu@npf.gov.ng',
         role: 'officer',
-        status: 'active',
+        isActive: true,
         stationName: 'Ikeja Division',
         createdAt: '2025-03-10T00:00:00Z',
         lastLoginAt: '2026-04-03T14:30:00Z',
       },
       {
         id: 'usr-003',
-        fullName: 'DSP Fatima Bello',
+        firstName: 'Fatima',
+        lastName: 'Bello',
+        fullName: 'Fatima Bello',
         email: 'fatima@npf.gov.ng',
         role: 'supervisor',
-        status: 'active',
+        isActive: true,
         stationName: 'Wuse Division',
         createdAt: '2025-06-01T00:00:00Z',
       },
@@ -406,44 +433,51 @@ export const handlers = [
       data: mockUsers,
       total: 3,
       page,
-      pageSize: 10,
+      limit: 10,
       totalPages: 1,
     };
     return HttpResponse.json(body);
   }),
 
-  http.post('/api/admin/users', async ({ request }) => {
+  // Current user profile
+  http.get('/api/v1/users/me', () => {
+    return HttpResponse.json(mockUser);
+  }),
+
+  http.post('/api/v1/users', async ({ request }) => {
     const payload = (await request.json()) as {
-      fullName: string;
+      firstName: string;
+      lastName: string;
       email: string;
-      role: string;
     };
     const newUser: AdminUser = {
       id: 'usr-new',
-      fullName: payload.fullName,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      fullName: `${payload.firstName} ${payload.lastName}`,
       email: payload.email,
-      role: payload.role as AdminUser['role'],
-      status: 'active',
+      role: 'officer',
+      isActive: true,
       createdAt: new Date().toISOString(),
     };
     return HttpResponse.json(newUser, { status: 201 });
   }),
 
-  http.patch('/api/admin/users/:id', async ({ request, params }) => {
+  http.put('/api/v1/users/:id', async ({ request, params }) => {
     const payload = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ id: params.id, ...payload });
   }),
 
-  http.delete('/api/admin/users/:id', () => {
-    return HttpResponse.json({ message: 'User removed' });
+  http.patch('/api/v1/users/:id/deactivate', ({ params }) => {
+    return HttpResponse.json({ id: params.id, isActive: false });
+  }),
+
+  http.patch('/api/v1/users/:id/activate', ({ params }) => {
+    return HttpResponse.json({ id: params.id, isActive: true });
   }),
 
   /* ── Profile ── */
-  http.patch('/api/profile', async () => {
+  http.patch('/api/v1/users/me', async () => {
     return HttpResponse.json({ message: 'Profile updated successfully.' });
-  }),
-
-  http.post('/api/profile/password', async () => {
-    return HttpResponse.json({ message: 'Password changed successfully.' });
   }),
 ];

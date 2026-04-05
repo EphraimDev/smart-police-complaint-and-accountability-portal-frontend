@@ -7,9 +7,15 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthUser, AuthState, LoginFormData } from '@/types/auth';
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  getAccessToken,
+  getRefreshToken,
+  clearTokens,
+} from '@/services/api';
 
 /* ── Storage keys ── */
-const TOKEN_KEY = 'spcap_token';
 const USER_KEY = 'spcap_user';
 
 /* ── Context value ── */
@@ -28,19 +34,22 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   /* Hydrate from storage on mount */
   useEffect(() => {
     try {
-      const storedToken = localStorage.getItem(TOKEN_KEY);
+      const storedToken = getAccessToken();
+      const storedRefreshToken = getRefreshToken();
       const storedUser = localStorage.getItem(USER_KEY);
       if (storedToken && storedUser) {
         setToken(storedToken);
+        setRefreshToken(storedRefreshToken);
         setUser(JSON.parse(storedUser) as AuthUser);
       }
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
+      clearTokens();
       localStorage.removeItem(USER_KEY);
     } finally {
       setIsLoading(false);
@@ -48,34 +57,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const login = useCallback(async (data: LoginFormData) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const response = await apiLogin(data);
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(
-        (body as { message?: string }).message ?? 'Login failed. Please try again.',
-      );
-    }
-
-    const { user: loggedInUser, token: newToken } = (await res.json()) as {
-      user: AuthUser;
-      token: string;
+    const loggedInUser: AuthUser = {
+      ...response.user,
+      fullName: response.user.fullName ??
+        `${response.user.firstName ?? ''} ${response.user.lastName ?? ''}`.trim(),
+      role: response.user.role ?? response.user.roles?.[0]?.name as AuthUser['role'] ?? 'officer',
     };
 
-    localStorage.setItem(TOKEN_KEY, newToken);
     localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
-    setToken(newToken);
+    setToken(response.accessToken);
+    setRefreshToken(response.refreshToken);
     setUser(loggedInUser);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
+  const logout = useCallback(async () => {
+    try {
+      await apiLogout();
+    } catch {
+      // Ignore logout API errors
+    }
     localStorage.removeItem(USER_KEY);
     setToken(null);
+    setRefreshToken(null);
     setUser(null);
   }, []);
 
@@ -83,12 +88,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       user,
       token,
+      refreshToken,
       isAuthenticated: !!token,
       isLoading,
       login,
       logout,
     }),
-    [user, token, isLoading, login, logout],
+    [user, token, refreshToken, isLoading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

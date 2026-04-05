@@ -3,32 +3,18 @@ import {
   useUsers,
   useCreateUser,
   useUpdateUser,
-  useDeleteUser,
+  useDeactivateUser,
 } from '@/hooks/useQueries';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { Input } from '@/components/Input';
-import { Select } from '@/components/Select';
 import { Table, TableHead, TableBody, TableRow, Th, Td } from '@/components/Table';
 import { SkeletonTableRows } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Alert } from '@/components/Alert';
 import type { AdminUser, CreateUserPayload } from '@/types/reports';
-
-const roleOptions = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'supervisor', label: 'Supervisor' },
-  { value: 'investigator', label: 'Investigator' },
-  { value: 'officer', label: 'Officer' },
-];
-
-const statusBadge: Record<AdminUser['status'], 'success' | 'default' | 'danger'> = {
-  active: 'success',
-  inactive: 'default',
-  suspended: 'danger',
-};
 
 export function UserManagementPage() {
   const [page, setPage] = useState(1);
@@ -38,7 +24,7 @@ export function UserManagementPage() {
 
   const { data, isLoading, isError, refetch } = useUsers(page);
   const createMutation = useCreateUser();
-  const deleteMutation = useDeleteUser();
+  const deactivateMutation = useDeactivateUser();
 
   return (
     <div className="space-y-6">
@@ -73,12 +59,14 @@ export function UserManagementPage() {
             ) : data && data.data.length > 0 ? (
               data.data.map((u) => (
                 <TableRow key={u.id}>
-                  <Td className="font-medium">{u.fullName}</Td>
+                  <Td className="font-medium">{u.fullName ?? `${u.firstName} ${u.lastName}`}</Td>
                   <Td>{u.email}</Td>
                   <Td className="capitalize">{u.role}</Td>
                   <Td>{u.stationName ?? '—'}</Td>
                   <Td>
-                    <Badge variant={statusBadge[u.status]}>{u.status}</Badge>
+                    <Badge variant={u.isActive ? 'success' : 'default'}>
+                      {u.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
                   </Td>
                   <Td>
                     <div className="flex gap-2">
@@ -88,19 +76,22 @@ export function UserManagementPage() {
                       >
                         Edit
                       </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Remove ${u.fullName}?`)) {
-                            deleteMutation.mutate(u.id, {
-                              onSuccess: () =>
-                                setSuccessMsg(`${u.fullName} has been removed.`),
-                            });
-                          }
-                        }}
-                        className="text-sm font-medium text-danger-600 hover:text-danger-700"
-                      >
-                        Remove
-                      </button>
+                      {u.isActive && (
+                        <button
+                          onClick={() => {
+                            const name = u.fullName ?? `${u.firstName} ${u.lastName}`;
+                            if (confirm(`Deactivate ${name}?`)) {
+                              deactivateMutation.mutate(u.id, {
+                                onSuccess: () =>
+                                  setSuccessMsg(`${name} has been deactivated.`),
+                              });
+                            }
+                          }}
+                          className="text-sm font-medium text-danger-600 hover:text-danger-700"
+                        >
+                          Deactivate
+                        </button>
+                      )}
                     </div>
                   </Td>
                 </TableRow>
@@ -181,17 +172,18 @@ function CreateUserModal({
   createMutation: ReturnType<typeof useCreateUser>;
 }) {
   const [form, setForm] = useState<CreateUserPayload>({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    role: 'officer',
+    password: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate(form, {
       onSuccess: () => {
-        onCreated(form.fullName);
-        setForm({ fullName: '', email: '', role: 'officer' });
+        onCreated(`${form.firstName} ${form.lastName}`);
+        setForm({ firstName: '', lastName: '', email: '', password: '' });
       },
     });
   };
@@ -200,10 +192,16 @@ function CreateUserModal({
     <Modal open={open} onClose={onClose} title="Add New User">
       <form onSubmit={handleSubmit} className="space-y-4 p-6">
         <Input
-          label="Full Name"
+          label="First Name"
           required
-          value={form.fullName}
-          onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+          value={form.firstName}
+          onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+        />
+        <Input
+          label="Last Name"
+          required
+          value={form.lastName}
+          onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
         />
         <Input
           label="Email"
@@ -212,13 +210,12 @@ function CreateUserModal({
           value={form.email}
           onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
         />
-        <Select
-          label="Role"
-          options={roleOptions}
-          value={form.role}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, role: e.target.value as CreateUserPayload['role'] }))
-          }
+        <Input
+          label="Password"
+          type="password"
+          required
+          value={form.password}
+          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
         />
         {createMutation.isError && (
           <Alert variant="danger">Failed to create user. Please try again.</Alert>
@@ -248,54 +245,40 @@ function EditUserModal({
 }) {
   const updateMutation = useUpdateUser(user.id);
   const [form, setForm] = useState({
-    fullName: user.fullName,
-    email: user.email,
-    role: user.role,
-    status: user.status,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone ?? '',
   });
+
+  const displayName = `${form.firstName} ${form.lastName}`;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate(form, {
-      onSuccess: () => onUpdated(form.fullName),
-    });
+    updateMutation.mutate(
+      { firstName: form.firstName, lastName: form.lastName, phone: form.phone || undefined },
+      { onSuccess: () => onUpdated(displayName) },
+    );
   };
 
   return (
-    <Modal open onClose={onClose} title={`Edit ${user.fullName}`}>
+    <Modal open onClose={onClose} title={`Edit ${user.fullName ?? `${user.firstName} ${user.lastName}`}`}>
       <form onSubmit={handleSubmit} className="space-y-4 p-6">
         <Input
-          label="Full Name"
+          label="First Name"
           required
-          value={form.fullName}
-          onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+          value={form.firstName}
+          onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
         />
         <Input
-          label="Email"
-          type="email"
+          label="Last Name"
           required
-          value={form.email}
-          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          value={form.lastName}
+          onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
         />
-        <Select
-          label="Role"
-          options={roleOptions}
-          value={form.role}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, role: e.target.value as AdminUser['role'] }))
-          }
-        />
-        <Select
-          label="Status"
-          options={[
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' },
-            { value: 'suspended', label: 'Suspended' },
-          ]}
-          value={form.status}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, status: e.target.value as AdminUser['status'] }))
-          }
+        <Input
+          label="Phone"
+          value={form.phone}
+          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
         />
         {updateMutation.isError && (
           <Alert variant="danger">Failed to update user. Please try again.</Alert>
