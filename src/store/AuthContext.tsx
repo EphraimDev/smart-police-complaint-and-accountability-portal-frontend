@@ -61,9 +61,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const loggedInUser: AuthUser = {
       ...response.user,
-      fullName: response.user.fullName ??
+      fullName:
+        response.user.fullName ??
         `${response.user.firstName ?? ''} ${response.user.lastName ?? ''}`.trim(),
-      role: response.user.role ?? response.user.roles?.[0]?.name as AuthUser['role'] ?? 'officer',
+      role:
+        response.user.role ??
+        (response.user.roles?.[0]?.name as AuthUser['role']) ??
+        'officer',
     };
 
     localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));

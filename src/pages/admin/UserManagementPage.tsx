@@ -59,7 +59,9 @@ export function UserManagementPage() {
             ) : data && data.data.length > 0 ? (
               data.data.map((u) => (
                 <TableRow key={u.id}>
-                  <Td className="font-medium">{u.fullName ?? `${u.firstName} ${u.lastName}`}</Td>
+                  <Td className="font-medium">
+                    {u.fullName ?? `${u.firstName} ${u.lastName}`}
+                  </Td>
                   <Td>{u.email}</Td>
                   <Td className="capitalize">{u.role}</Td>
                   <Td>{u.stationName ?? '—'}</Td>
@@ -255,13 +257,21 @@ function EditUserModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateMutation.mutate(
-      { firstName: form.firstName, lastName: form.lastName, phone: form.phone || undefined },
+      {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone || undefined,
+      },
       { onSuccess: () => onUpdated(displayName) },
     );
   };
 
   return (
-    <Modal open onClose={onClose} title={`Edit ${user.fullName ?? `${user.firstName} ${user.lastName}`}`}>
+    <Modal
+      open
+      onClose={onClose}
+      title={`Edit ${user.fullName ?? `${user.firstName} ${user.lastName}`}`}
+    >
       <form onSubmit={handleSubmit} className="space-y-4 p-6">
         <Input
           label="First Name"

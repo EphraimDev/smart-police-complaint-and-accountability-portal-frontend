@@ -83,7 +83,10 @@ export function DashboardOverviewPage() {
         ) : (
           <div className="divide-y divide-gray-100">
             {data.recentComplaints.map((c) => {
-              const badge = statusBadge[c.status] ?? { label: c.status, variant: 'default' as const };
+              const badge = statusBadge[c.status] ?? {
+                label: c.status,
+                variant: 'default' as const,
+              };
               return (
                 <Link
                   key={c.id}

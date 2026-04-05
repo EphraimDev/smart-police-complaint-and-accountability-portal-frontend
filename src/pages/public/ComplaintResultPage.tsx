@@ -80,7 +80,10 @@ export function ComplaintResultPage() {
     );
   }
 
-  const badge = statusBadge[complaint.status] ?? { variant: 'default' as const, label: complaint.status };
+  const badge = statusBadge[complaint.status] ?? {
+    variant: 'default' as const,
+    label: complaint.status,
+  };
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-10">
@@ -106,7 +109,7 @@ export function ComplaintResultPage() {
           {complaint.severity && (
             <div>
               <dt className="font-medium text-gray-500">Severity</dt>
-              <dd className="mt-1 text-gray-900 capitalize">{complaint.severity}</dd>
+              <dd className="mt-1 capitalize text-gray-900">{complaint.severity}</dd>
             </div>
           )}
           {complaint.incidentLocation && (
@@ -138,7 +141,10 @@ export function ComplaintResultPage() {
           </h2>
           <ol className="relative border-l border-gray-200 pl-6">
             {complaint.statusHistory.map((entry, i) => {
-              const entryBadge = statusBadge[entry.status] ?? { variant: 'default' as const, label: entry.status };
+              const entryBadge = statusBadge[entry.status] ?? {
+                variant: 'default' as const,
+                label: entry.status,
+              };
               return (
                 <li key={i} className="mb-6 last:mb-0">
                   <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-primary-500" />

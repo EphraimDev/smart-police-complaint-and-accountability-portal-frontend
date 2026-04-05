@@ -19,10 +19,7 @@ import type {
   ProfileUpdatePayload,
   ChangePasswordPayload,
 } from '@/types/reports';
-import type {
-  LoginResponse,
-  LoginFormData,
-} from '@/types/auth';
+import type { LoginResponse, LoginFormData } from '@/types/auth';
 import type {
   ComplaintFormData,
   ComplaintSubmissionResponse,
@@ -196,7 +193,9 @@ export async function logout(): Promise<void> {
   }
 }
 
-export function changePassword(payload: ChangePasswordPayload): Promise<{ message: string }> {
+export function changePassword(
+  payload: ChangePasswordPayload,
+): Promise<{ message: string }> {
   return request('/auth/change-password', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -265,7 +264,9 @@ export function updateProfile(payload: ProfileUpdatePayload): Promise<AdminUser>
    Roles & Permissions
    ═══════════════════════════════════════════════ */
 
-export function fetchRoles(): Promise<Array<{ id: string; name: string; description?: string }>> {
+export function fetchRoles(): Promise<
+  Array<{ id: string; name: string; description?: string }>
+> {
   return request('/roles');
 }
 
@@ -349,7 +350,13 @@ export function fetchComplaint(id: string): Promise<InternalComplaint> {
 
 export function updateComplaint(
   id: string,
-  payload: { title?: string; description?: string; severity?: string; incidentLocation?: string; stationId?: string },
+  payload: {
+    title?: string;
+    description?: string;
+    severity?: string;
+    incidentLocation?: string;
+    stationId?: string;
+  },
 ): Promise<InternalComplaint> {
   return request(`/complaints/${id}`, {
     method: 'PUT',
@@ -389,14 +396,18 @@ export function fetchComplaintNotes(id: string): Promise<ComplaintNote[]> {
    Complaint Assignments
    ═══════════════════════════════════════════════ */
 
-export function assignComplaint(payload: AssignComplaintPayload): Promise<ComplaintAssignment> {
+export function assignComplaint(
+  payload: AssignComplaintPayload,
+): Promise<ComplaintAssignment> {
   return request('/complaint-assignments', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
-export function fetchAssignmentsForComplaint(complaintId: string): Promise<ComplaintAssignment[]> {
+export function fetchAssignmentsForComplaint(
+  complaintId: string,
+): Promise<ComplaintAssignment[]> {
   return request(`/complaint-assignments/complaint/${complaintId}`);
 }
 
@@ -506,7 +517,8 @@ export async function fetchReports(filters?: ReportFilters): Promise<ReportsData
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trendsData = trends.status === 'fulfilled' ? (trends.value as any) : {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const escalationData = escalation.status === 'fulfilled' ? (escalation.value as any) : {};
+  const escalationData =
+    escalation.status === 'fulfilled' ? (escalation.value as any) : {};
 
   return {
     complaintsTrend: trendsData.data ?? trendsData.trends ?? [],

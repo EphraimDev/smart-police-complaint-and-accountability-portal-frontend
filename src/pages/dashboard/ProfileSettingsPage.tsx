@@ -38,7 +38,9 @@ export function ProfileSettingsPage() {
                 .toUpperCase()}
             </div>
             <div>
-              <p className="text-lg font-semibold text-gray-900">{user.fullName ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {user.fullName ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`}
+              </p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">{user.email}</span>
                 <Badge variant="primary" className="capitalize">

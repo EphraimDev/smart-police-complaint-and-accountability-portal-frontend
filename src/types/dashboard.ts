@@ -41,7 +41,12 @@ export interface InternalComplaint {
   stationId?: string;
   station?: { id: string; name: string; code?: string };
   officerIds?: string[];
-  officers?: Array<{ id: string; firstName: string; lastName: string; badgeNumber: string }>;
+  officers?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    badgeNumber: string;
+  }>;
   assignedInvestigatorId?: string;
   assignedInvestigator?: { id: string; firstName: string; lastName: string };
   isOverdue?: boolean;
@@ -90,7 +95,13 @@ export interface ComplaintAssignment {
   assigneeId: string;
   assignee?: { id: string; firstName: string; lastName: string };
   assignmentReason?: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'reassigned' | 'declined';
+  status:
+    | 'pending'
+    | 'accepted'
+    | 'in_progress'
+    | 'completed'
+    | 'reassigned'
+    | 'declined';
   slaDueDate?: string;
   createdAt: string;
 }

@@ -32,7 +32,9 @@ export function OfficersListPage() {
             ) : data && data.data.length > 0 ? (
               data.data.map((o) => (
                 <TableRow key={o.id}>
-                  <Td className="font-medium">{o.firstName} {o.lastName}</Td>
+                  <Td className="font-medium">
+                    {o.firstName} {o.lastName}
+                  </Td>
                   <Td>{o.badgeNumber}</Td>
                   <Td>{o.rank}</Td>
                   <Td>{o.station?.name ?? '—'}</Td>

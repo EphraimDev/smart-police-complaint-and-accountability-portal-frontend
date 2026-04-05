@@ -84,9 +84,7 @@ export function ComplaintDetailPage() {
           >
             &larr; Back to complaints
           </Link>
-          <h1 className="mt-1 text-2xl font-bold text-gray-900">
-            {complaint.reference}
-          </h1>
+          <h1 className="mt-1 text-2xl font-bold text-gray-900">{complaint.reference}</h1>
         </div>
         <Badge variant={statusVariant[complaint.status] ?? 'default'}>
           {statusLabel[complaint.status] ?? complaint.status}
@@ -105,7 +103,10 @@ export function ComplaintDetailPage() {
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Dd label="Title" value={complaint.title} />
                 <Dd label="Category" value={complaint.category} />
-                <Dd label="Status" value={statusLabel[complaint.status] ?? complaint.status} />
+                <Dd
+                  label="Status"
+                  value={statusLabel[complaint.status] ?? complaint.status}
+                />
                 <Dd label="Severity" value={complaint.severity ?? '—'} />
                 {complaint.station && (
                   <Dd label="Police Station" value={complaint.station.name} />
@@ -136,7 +137,13 @@ export function ComplaintDetailPage() {
             </CardHeader>
             <CardBody>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Dd label="Name" value={complaint.complainantName ?? (complaint.isAnonymous ? 'Anonymous' : '—')} />
+                <Dd
+                  label="Name"
+                  value={
+                    complaint.complainantName ??
+                    (complaint.isAnonymous ? 'Anonymous' : '—')
+                  }
+                />
                 <Dd label="Email" value={complaint.complainantEmail ?? '—'} />
                 <Dd label="Phone" value={complaint.complainantPhone ?? '—'} />
               </dl>

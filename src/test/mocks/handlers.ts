@@ -132,8 +132,18 @@ const mockComplaintResult: ComplaintResult = {
   createdAt: '2026-03-28T10:30:00Z',
   updatedAt: '2026-04-02T14:00:00Z',
   statusHistory: [
-    { status: 'submitted', createdAt: '2026-03-28T10:30:00Z', reason: 'Complaint received and logged.', changedBy: 'system' },
-    { status: 'under_review', createdAt: '2026-04-02T14:00:00Z', reason: 'Assigned to oversight unit.', changedBy: 'Superintendent Abubakar' },
+    {
+      status: 'submitted',
+      createdAt: '2026-03-28T10:30:00Z',
+      reason: 'Complaint received and logged.',
+      changedBy: 'system',
+    },
+    {
+      status: 'under_review',
+      createdAt: '2026-04-02T14:00:00Z',
+      reason: 'Assigned to oversight unit.',
+      changedBy: 'Superintendent Abubakar',
+    },
   ],
 };
 
@@ -245,7 +255,10 @@ export const handlers = [
   }),
 
   http.post('/api/v1/complaints/:id/notes', async () => {
-    return HttpResponse.json({ id: 'note-new', content: 'Test note', createdAt: new Date().toISOString() }, { status: 201 });
+    return HttpResponse.json(
+      { id: 'note-new', content: 'Test note', createdAt: new Date().toISOString() },
+      { status: 201 },
+    );
   }),
 
   // Status history

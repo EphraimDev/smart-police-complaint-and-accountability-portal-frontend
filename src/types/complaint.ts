@@ -118,7 +118,7 @@ export interface ComplaintSubmissionResponse {
   message: string;
   correlationId: string;
   data: {
-    createdBy: null|{ id: string; firstName: string; lastName: string };
+    createdBy: null | { id: string; firstName: string; lastName: string };
     referenceNumber: string;
     title: string;
     description: string;
@@ -128,20 +128,20 @@ export interface ComplaintSubmissionResponse {
     source: string;
     channel: string;
     isAnonymous: boolean;
-    citizenUserId: null|string;
+    citizenUserId: null | string;
     complainantNameEncrypted: string;
     complainantEmailEncrypted: string;
     complainantPhoneEncrypted: string;
-    complainantAddressEncrypted: null|string;
+    complainantAddressEncrypted: null | string;
     incidentDate: string;
     incidentLocation: string;
-    stationId: null|string;
+    stationId: null | string;
     trackingToken: string;
-    idempotencyKey: null|string;
-    updatedBy: null|string;
-    resolutionSummary: null|string;
-    closedAt: null|string;
-    slaDueDate: null|string;
+    idempotencyKey: null | string;
+    updatedBy: null | string;
+    resolutionSummary: null | string;
+    closedAt: null | string;
+    slaDueDate: null | string;
     id: string;
     createdAt: string;
     updatedAt: string;
@@ -163,5 +163,10 @@ export interface ComplaintResult {
   incidentLocation?: string;
   createdAt: string;
   updatedAt: string;
-  statusHistory?: Array<{ status: ComplaintStatus; createdAt: string; reason?: string; changedBy?: string }>;
+  statusHistory?: Array<{
+    status: ComplaintStatus;
+    createdAt: string;
+    reason?: string;
+    changedBy?: string;
+  }>;
 }
