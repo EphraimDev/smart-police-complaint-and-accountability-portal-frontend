@@ -86,6 +86,37 @@ export interface InternalComplaint {
   };
 }
 
+export interface ComplaintListResponse {
+  success: true;
+  message: 'Success';
+  correlationId: 'unknown';
+  data: {
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    referenceNumber: string;
+    title: string;
+    status: ComplaintStatus;
+    severity: string;
+    category: string;
+    source: string;
+    channel: string;
+    isAnonymous: boolean;
+    stationId: string | null;
+    slaDueDate: string | null;
+    isOverdue: boolean;
+    station: { id: string; name: string } | null;
+  }[];
+  meta: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
 export interface StatusHistoryEntry {
   id: string;
   createdAt: string;

@@ -62,7 +62,6 @@ export function ComplaintsListPage() {
     page,
     statusFilter || undefined,
   );
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -106,7 +105,7 @@ export function ComplaintsListPage() {
             ) : data && data.data.length > 0 ? (
               data.data.map((c) => (
                 <TableRow key={c.id}>
-                  <Td className="font-medium">{c.reference}</Td>
+                  <Td className="font-medium">{c.referenceNumber}</Td>
                   <Td>{c.category}</Td>
                   <Td>{c.station?.name ?? '—'}</Td>
                   <Td>
@@ -140,16 +139,16 @@ export function ComplaintsListPage() {
       )}
 
       {/* Pagination */}
-      {data && data.totalPages > 1 && (
+      {data && data.meta.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            Page {data.page} of {data.totalPages} ({data.total} total)
+            Page {data.meta.page} of {data.meta.totalPages} ({data.meta.totalItems} total)
           </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              disabled={data.page <= 1}
+              disabled={data.meta.page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
               Previous
@@ -157,7 +156,7 @@ export function ComplaintsListPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={data.page >= data.totalPages}
+              disabled={data.meta.page >= data.meta.totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
               Next

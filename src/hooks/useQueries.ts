@@ -10,6 +10,7 @@ import {
   addComplaintNote,
   fetchOfficers,
   fetchOfficer,
+  bulkUploadOfficers,
   fetchStations,
   createStation,
   bulkUploadStations,
@@ -155,12 +156,22 @@ export function useOfficer(id: string) {
   });
 }
 
+export function useBulkUploadOfficers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { file: File; stationId: string }) => bulkUploadOfficers(payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['officers'] });
+    },
+  });
+}
+
 /* ── Stations ── */
 
-export function useStations(page = 1) {
+export function useStations(page = 1, limit = 20) {
   return useQuery({
-    queryKey: queryKeys.stations(page),
-    queryFn: () => fetchStations(page),
+    queryKey: [...queryKeys.stations(page), limit],
+    queryFn: () => fetchStations(page, limit),
   });
 }
 

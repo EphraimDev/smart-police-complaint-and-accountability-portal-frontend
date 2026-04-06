@@ -49,17 +49,26 @@ export interface OfficerPerformance {
 
 /* ── Reports response (aggregated from multiple endpoints) ── */
 export interface ReportsData {
-  complaintsTrend: TimeSeriesPoint[];
-  categoryBreakdown: CategoryBreakdown[];
-  statusBreakdown: StatusBreakdown[];
-  stationRankings: StationRanking[];
-  officerPerformance: OfficerPerformance[];
+  complaintsTrend: {
+    trends: { period: string; count: string }[];
+  };
+  categoryBreakdown: [];
+  statusBreakdown: [];
+  stationRankings: [];
+  officerPerformance: [];
   summary: {
     totalComplaints: number;
     avgResolutionDays: number;
     resolutionRate: number;
     complaintsThisMonth: number;
     changeFromLastMonth: number;
+    success: true;
+    message: 'Success';
+    correlationId: 'unknown';
+    data: {
+      totalEscalations: number;
+      byReason: [];
+    };
   };
 }
 

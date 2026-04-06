@@ -361,6 +361,56 @@ export const handlers = [
     };
     return HttpResponse.json(body);
   }),
+  http.get('http://localhost:3006/api/v1/officers', ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const body: PaginatedResponse<Officer> = {
+      data: mockOfficers,
+      total: 2,
+      page,
+      limit: 10,
+      totalPages: 1,
+    };
+    return HttpResponse.json(body);
+  }),
+  http.post('/api/v1/officers/bulk-upload', async ({ request }) => {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const stationId = formData.get('stationId');
+
+    if (!(file instanceof File)) {
+      return HttpResponse.json({ message: 'File is required.' }, { status: 400 });
+    }
+    if (typeof stationId !== 'string' || !stationId.trim()) {
+      return HttpResponse.json({ message: 'Station is required.' }, { status: 400 });
+    }
+
+    return HttpResponse.json({
+      message: '2 officers uploaded successfully.',
+      count: 2,
+      fileName: file.name,
+      stationId,
+    });
+  }),
+  http.post('http://localhost:3006/api/v1/officers/bulk-upload', async ({ request }) => {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const stationId = formData.get('stationId');
+
+    if (!(file instanceof File)) {
+      return HttpResponse.json({ message: 'File is required.' }, { status: 400 });
+    }
+    if (typeof stationId !== 'string' || !stationId.trim()) {
+      return HttpResponse.json({ message: 'Station is required.' }, { status: 400 });
+    }
+
+    return HttpResponse.json({
+      message: '2 officers uploaded successfully.',
+      count: 2,
+      fileName: file.name,
+      stationId,
+    });
+  }),
 
   // List stations
   http.get('/api/v1/police-stations', ({ request }) => {

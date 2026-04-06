@@ -11,6 +11,7 @@ import type {
   ComplaintNote,
   ComplaintAssignment,
   StatusHistoryEntryResponse,
+  ComplaintListResponse,
 } from '@/types/dashboard';
 import type {
   ReportsData,
@@ -442,7 +443,7 @@ export function fetchComplaints(
     stationId?: string;
     officerId?: string;
   },
-): Promise<PaginatedResponse<InternalComplaint>> {
+): Promise<ComplaintListResponse> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (filters?.status) params.set('status', filters.status);
   if (filters?.category) params.set('category', filters.category);
@@ -554,6 +555,35 @@ export function fetchOfficers(
 
 export function fetchOfficer(id: string): Promise<Officer> {
   return request(`/officers/${id}`);
+}
+
+export function bulkUploadOfficers({
+  file,
+  stationId,
+}: {
+  file: File;
+  stationId: string;
+}): Promise<{ message?: string; count?: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('stationId', stationId);
+
+  return fetch(`${API_BASE}/officers/bulk-upload`, {
+    method: 'POST',
+    headers: {
+      ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
+    },
+    body: formData,
+  }).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(
+        (body as { message?: string }).message ?? `Request failed (${res.status})`,
+      );
+    }
+
+    return res.json() as Promise<{ message?: string; count?: number }>;
+  });
 }
 
 /* ═══════════════════════════════════════════════

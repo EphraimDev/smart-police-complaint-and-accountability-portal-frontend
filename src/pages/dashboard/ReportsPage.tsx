@@ -80,7 +80,7 @@ export function ReportsPage() {
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters | undefined>();
 
   const { data, isLoading, isError, refetch } = useReports(appliedFilters);
-
+  console.log(data, "pppppppppppp")
   const handleChange = useCallback((name: string, value: string) => {
     setFilterValues((prev) => ({ ...prev, [name]: value }));
   }, []);
@@ -137,11 +137,11 @@ export function ReportsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <TrendLine
           title="Complaints Over Time"
-          data={data.complaintsTrend.map((p) => ({ label: p.date, value: p.count }))}
+          data={data.complaintsTrend.trends.map((p) => ({ label: p.period, value: Number(p.count) }))}
         />
         <DonutChart
           title="Status Distribution"
-          data={data.statusBreakdown.map((s) => ({
+          data={data.statusBreakdown.map((s:any) => ({
             label: s.status.replace(/_/g, ' '),
             value: s.count,
             color: statusColors[s.status] ?? '#6B7280',
@@ -151,7 +151,7 @@ export function ReportsPage() {
 
       <BarChart
         title="Complaints by Category"
-        data={data.categoryBreakdown.map((c, i) => ({
+        data={data.categoryBreakdown.map((c:any, i) => ({
           label: c.category,
           value: c.count,
           color: categoryColors[i % categoryColors.length],
@@ -172,7 +172,7 @@ export function ReportsPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.stationRankings.map((s) => (
+            {data.stationRankings.map((s:any) => (
               <TableRow key={s.stationId}>
                 <Td className="font-medium">{s.stationName}</Td>
                 <Td>{s.state}</Td>
@@ -199,7 +199,7 @@ export function ReportsPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.officerPerformance.map((o) => (
+            {data.officerPerformance.map((o:any) => (
               <TableRow key={o.officerId}>
                 <Td className="font-medium">{o.officerName}</Td>
                 <Td>{o.rank}</Td>
