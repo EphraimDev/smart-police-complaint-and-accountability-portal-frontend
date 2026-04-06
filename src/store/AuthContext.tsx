@@ -6,19 +6,25 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { AuthUser, AuthState, LoginFormData } from '@/types/auth';
+import {
+  normalizePermissions,
+  normalizeUserRole,
+  normalizeUserRoles,
+  type AuthUser,
+  type AuthState,
+  type LoginFormData,
+} from '@/types/auth';
 import {
   login as apiLogin,
   logout as apiLogout,
   getAccessToken,
   getRefreshToken,
   clearTokens,
+  fetchPermissions,
 } from '@/services/api';
 
-/* ── Storage keys ── */
 const USER_KEY = 'spcap_user';
 
-/* ── Context value ── */
 export interface AuthContextValue extends AuthState {
   login: (data: LoginFormData) => Promise<void>;
   logout: () => void;
@@ -26,9 +32,53 @@ export interface AuthContextValue extends AuthState {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-/* ── Provider ── */
 interface AuthProviderProps {
   children: ReactNode;
+}
+
+type StoredAuthUser = Partial<AuthUser> & {
+  id: string;
+  email: string;
+};
+
+function buildAuthUser(user: {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  role?: string | null;
+  roles?: Array<string | null | undefined>;
+  permissions?: Array<string | null | undefined>;
+  avatarUrl?: string;
+  isActive?: boolean;
+}): AuthUser {
+  const normalizedRoles = normalizeUserRoles(user.roles?.length ? user.roles : [user.role]);
+  const role = normalizeUserRole(user.role, normalizedRoles[0]);
+  const fullName =
+    user.fullName?.trim() ||
+    `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() ||
+    user.email;
+
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName ?? '',
+    lastName: user.lastName ?? '',
+    fullName,
+    role,
+    roles: normalizedRoles.length ? normalizedRoles : [role],
+    permissions: normalizePermissions(user.permissions),
+    avatarUrl: user.avatarUrl,
+    isActive: user.isActive,
+  };
+}
+
+function isStoredAuthUser(value: unknown): value is StoredAuthUser {
+  if (!value || typeof value !== 'object') return false;
+
+  const record = value as Record<string, unknown>;
+  return typeof record.id === 'string' && typeof record.email === 'string';
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
@@ -37,42 +87,79 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  /* Hydrate from storage on mount */
   useEffect(() => {
-    try {
-      const storedToken = getAccessToken();
-      const storedRefreshToken = getRefreshToken();
-      const storedUser = localStorage.getItem(USER_KEY);
-      if (storedToken && storedUser) {
+    let isMounted = true;
+
+    async function hydrateAuth() {
+      try {
+        const storedToken = getAccessToken();
+        const storedRefreshToken = getRefreshToken();
+        const storedUser = localStorage.getItem(USER_KEY);
+
+        if (!storedToken || !storedUser) {
+          return;
+        }
+
+        const parsedUser = JSON.parse(storedUser) as unknown;
+        if (!isStoredAuthUser(parsedUser)) {
+          throw new Error('Stored auth user is invalid');
+        }
+
+        const hydratedUser = buildAuthUser(parsedUser);
+
+        if (!isMounted) return;
+
         setToken(storedToken);
         setRefreshToken(storedRefreshToken);
-        setUser(JSON.parse(storedUser) as AuthUser);
+        setUser(hydratedUser);
+
+        if (hydratedUser.permissions.length === 0) {
+          try {
+            const permissions = await fetchPermissions();
+            if (!isMounted) return;
+
+            const updatedUser = {
+              ...hydratedUser,
+              permissions: normalizePermissions(permissions),
+            };
+
+            localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+            setUser(updatedUser);
+          } catch {
+            // If permissions fail to load on refresh, keep the stored session alive.
+          }
+        }
+      } catch {
+        clearTokens();
+        localStorage.removeItem(USER_KEY);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    } catch {
-      clearTokens();
-      localStorage.removeItem(USER_KEY);
-    } finally {
-      setIsLoading(false);
     }
+
+    void hydrateAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback(async (data: LoginFormData) => {
     const response = await apiLogin(data);
+    const permissions = await fetchPermissions().catch(() => []);
 
-    const loggedInUser: AuthUser = {
-      ...response.user,
-      fullName:
-        response.user.fullName ??
-        `${response.user.firstName ?? ''} ${response.user.lastName ?? ''}`.trim(),
-      role:
-        response.user.role ??
-        (response.user.roles?.[0]?.name as AuthUser['role']) ??
-        'officer',
-    };
+    const loggedInUser = buildAuthUser({
+      ...response.data.user,
+      roles: response.data.user.roles,
+      role: response.data.user.roles.find(Boolean),
+      permissions,
+    });
 
     localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
-    setToken(response.accessToken);
-    setRefreshToken(response.refreshToken);
+    setToken(response.data.tokens.accessToken);
+    setRefreshToken(response.data.tokens.refreshToken);
     setUser(loggedInUser);
   }, []);
 

@@ -1,4 +1,5 @@
 import type { ComplaintStatus } from './complaint';
+import type { UserRole } from './auth';
 
 /* ── Report filters ── */
 export interface ReportFilters {
@@ -70,8 +71,8 @@ export interface AdminUser {
   fullName: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'officer' | 'investigator' | 'supervisor';
-  roles?: Array<{ id: string; name: string }>;
+  role: UserRole;
+  roles?: Array<string>;
   isActive: boolean;
   stationName?: string;
   createdAt: string;
@@ -82,9 +83,15 @@ export interface CreateUserPayload {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
   phone?: string;
   roleIds?: string[];
+  roles?: string[];
+}
+
+export interface RoleOption {
+  id: string;
+  name: string;
+  description?: string;
 }
 
 export interface UpdateUserPayload {

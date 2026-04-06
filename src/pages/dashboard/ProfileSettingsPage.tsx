@@ -6,6 +6,7 @@ import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { Alert } from '@/components/Alert';
 import { Badge } from '@/components/Badge';
+import { formatUserRole } from '@/types/auth';
 
 export function ProfileSettingsPage() {
   const { user, isLoading } = useAuth();
@@ -43,8 +44,8 @@ export function ProfileSettingsPage() {
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">{user.email}</span>
-                <Badge variant="primary" className="capitalize">
-                  {user.role}
+                <Badge variant="primary">
+                  {formatUserRole(user.role)}
                 </Badge>
               </div>
             </div>

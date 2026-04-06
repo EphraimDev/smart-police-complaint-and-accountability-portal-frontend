@@ -2,13 +2,30 @@ import type { ComplaintStatus } from './complaint';
 
 /* ── Dashboard stats (from GET /api/v1/admin/dashboard) ── */
 export interface DashboardStats {
-  totalComplaints: number;
-  pendingComplaints: number;
-  investigatingComplaints: number;
-  resolvedComplaints: number;
-  totalOfficers: number;
-  totalStations: number;
-  recentComplaints: InternalComplaint[];
+  success: true;
+  message: 'Success';
+  correlationId: 'unknown';
+  data: {
+    stats: {
+      totalComplaints: number;
+      openComplaints: number;
+      resolvedComplaints: number;
+      overdueComplaints: number;
+      totalUsers: number;
+      activeUsers: number;
+      totalOfficers: number;
+      totalStations: number;
+      pendingEscalations: number;
+    };
+    recentComplaints: {
+      id: string;
+      createdAt: string;
+      referenceNumber: string;
+      title: string;
+      status: ComplaintStatus;
+      severity: string;
+    }[];
+  };
 }
 
 /* ── Paginated list (common shape from API) ── */
@@ -22,47 +39,76 @@ export interface PaginatedResponse<T> {
 
 /* ── Internal complaint (staff-facing, from GET /api/v1/complaints/{id}) ── */
 export interface InternalComplaint {
-  id: string;
-  reference: string;
-  title: string;
-  description: string;
-  category: string;
-  severity: string;
-  status: ComplaintStatus;
-  source?: string;
-  channel?: string;
-  isAnonymous?: boolean;
-  complainantName?: string;
-  complainantEmail?: string;
-  complainantPhone?: string;
-  complainantAddress?: string;
-  incidentDate?: string;
-  incidentLocation?: string;
-  stationId?: string;
-  station?: { id: string; name: string; code?: string };
-  officerIds?: string[];
-  officers?: Array<{
+  success: true;
+  message: 'Success';
+  correlationId: 'unknown';
+  data: {
     id: string;
-    firstName: string;
-    lastName: string;
-    badgeNumber: string;
-  }>;
-  assignedInvestigatorId?: string;
-  assignedInvestigator?: { id: string; firstName: string; lastName: string };
-  isOverdue?: boolean;
-  isEscalated?: boolean;
-  createdAt: string;
-  updatedAt: string;
+    createdAt: string;
+    updatedAt: string;
+    createdBy: null | string;
+    updatedBy: null | string;
+    referenceNumber: string;
+    title: string;
+    description: string;
+    status: ComplaintStatus;
+    severity: string;
+    category: string;
+    source: string;
+    channel: string;
+    isAnonymous: boolean;
+    citizenUserId: string | null;
+    complainantNameEncrypted: string;
+    complainantEmailEncrypted: string;
+    complainantPhoneEncrypted: string;
+    complainantAddressEncrypted: string | null;
+    incidentDate: string;
+    incidentLocation: string;
+    stationId: string | null;
+    trackingToken: string;
+    resolutionSummary: string | null;
+    closedAt: string | null;
+    slaDueDate: string | null;
+    isOverdue: boolean;
+    idempotencyKey: string | null;
+    version: number;
+    station: {
+      id: string;
+      code: string;
+      name: string;
+      address: string;
+    } | null;
+    complainantName: string;
+    complainantEmail: string;
+    complainantPhone: string;
+    complainantAddress: string;
+    assignedOfficers: { id: string; firstName: string; lastName: string }[];
+  };
 }
 
 export interface StatusHistoryEntry {
   id: string;
-  status: ComplaintStatus;
-  reasonCode?: string;
-  reason?: string;
-  resolutionSummary?: string;
   createdAt: string;
-  changedBy?: { id: string; firstName: string; lastName: string };
+  updatedAt: string;
+  complaintId: string;
+  previousStatus: ComplaintStatus | null;
+  newStatus: ComplaintStatus;
+  changedById: string;
+  reasonCode: string | null;
+  reason: string;
+  metadata: Record<string, unknown> | null;
+  changedBy: {
+    id: true;
+    firstName: true;
+    lastName: true;
+  } | null;
+}
+
+export interface StatusHistoryEntryResponse {
+  success: true;
+  message: 'Success';
+  correlationId: 'unknown';
+  data: StatusHistoryEntry[];
 }
 
 export interface ComplaintNote {
@@ -147,4 +193,13 @@ export interface Station {
   parentStationId?: string;
   commandingOfficerId?: string;
   createdAt: string;
+}
+
+export interface CreateStationPayload {
+  name: string;
+  code: string;
+  address?: string;
+  region?: string;
+  phone?: string;
+  email?: string;
 }

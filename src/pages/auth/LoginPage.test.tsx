@@ -61,7 +61,8 @@ describe('LoginPage', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 
-    expect(localStorage.getItem('spcap_token')).toBe('mock-jwt-token');
+    expect(localStorage.getItem('spcap_token')).toBe('mock-access-token');
+    expect(localStorage.getItem('spcap_user')).toContain('"permissions":["user:read","report:view"]');
   });
 
   it('shows server error on invalid credentials', async () => {
@@ -73,7 +74,7 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/password/i), 'wrongpass');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();
+    expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument();
   });
 
   it('has a link to forgot password page', () => {

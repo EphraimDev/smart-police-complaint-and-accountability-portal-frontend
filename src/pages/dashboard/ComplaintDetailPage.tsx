@@ -61,7 +61,6 @@ const statusOptions = Object.entries(statusLabel).map(([value, label]) => ({
 export function ComplaintDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
   const { data: complaint, isLoading, isError, refetch } = useComplaint(id);
-
   if (isLoading) return <ComplaintDetailSkeleton />;
   if (isError || !complaint) {
     return (
@@ -84,10 +83,12 @@ export function ComplaintDetailPage() {
           >
             &larr; Back to complaints
           </Link>
-          <h1 className="mt-1 text-2xl font-bold text-gray-900">{complaint.reference}</h1>
+          <h1 className="mt-1 text-2xl font-bold text-gray-900">
+            {complaint.data.referenceNumber}
+          </h1>
         </div>
-        <Badge variant={statusVariant[complaint.status] ?? 'default'}>
-          {statusLabel[complaint.status] ?? complaint.status}
+        <Badge variant={statusVariant[complaint.data.status] ?? 'default'}>
+          {statusLabel[complaint.data.status] ?? complaint.data.status}
         </Badge>
       </div>
 
@@ -101,30 +102,30 @@ export function ComplaintDetailPage() {
             </CardHeader>
             <CardBody>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Dd label="Title" value={complaint.title} />
-                <Dd label="Category" value={complaint.category} />
+                <Dd label="Title" value={complaint.data.title} />
+                <Dd label="Category" value={complaint.data.category} />
                 <Dd
                   label="Status"
-                  value={statusLabel[complaint.status] ?? complaint.status}
+                  value={statusLabel[complaint.data.status] ?? complaint.data.status}
                 />
-                <Dd label="Severity" value={complaint.severity ?? '—'} />
-                {complaint.station && (
-                  <Dd label="Police Station" value={complaint.station.name} />
+                <Dd label="Severity" value={complaint.data.severity ?? '—'} />
+                {complaint.data.station && (
+                  <Dd label="Police Station" value={complaint.data.station.name} />
                 )}
-                {complaint.incidentLocation && (
-                  <Dd label="Incident Location" value={complaint.incidentLocation} />
+                {complaint.data.incidentLocation && (
+                  <Dd label="Incident Location" value={complaint.data.incidentLocation} />
                 )}
-                {complaint.incidentDate && (
+                {complaint.data.incidentDate && (
                   <Dd
                     label="Incident Date"
-                    value={new Date(complaint.incidentDate).toLocaleDateString()}
+                    value={new Date(complaint.data.incidentDate).toLocaleDateString()}
                   />
                 )}
               </dl>
               <div className="mt-4 border-t border-gray-100 pt-4">
                 <p className="text-xs font-medium uppercase text-gray-500">Description</p>
                 <p className="mt-1 whitespace-pre-line text-sm text-gray-700">
-                  {complaint.description}
+                  {complaint.data.description}
                 </p>
               </div>
             </CardBody>
@@ -140,29 +141,33 @@ export function ComplaintDetailPage() {
                 <Dd
                   label="Name"
                   value={
-                    complaint.complainantName ??
-                    (complaint.isAnonymous ? 'Anonymous' : '—')
+                    complaint.data.complainantName ??
+                    (complaint.data.isAnonymous ? 'Anonymous' : '—')
                   }
                 />
-                <Dd label="Email" value={complaint.complainantEmail ?? '—'} />
-                <Dd label="Phone" value={complaint.complainantPhone ?? '—'} />
+                <Dd label="Email" value={complaint.data.complainantEmail ?? '—'} />
+                <Dd label="Phone" value={complaint.data.complainantPhone ?? '—'} />
               </dl>
             </CardBody>
           </Card>
 
           {/* Timeline */}
-          <StatusTimeline complaintId={complaint.id} />
+          <StatusTimeline complaintId={complaint.data.id} />
         </div>
 
         {/* Right column – actions */}
         <div className="space-y-6">
           <AssignmentPanel
-            complaintId={complaint.id}
-            assignedInvestigator={complaint.assignedInvestigator}
+            complaintId={complaint.data.id}
+            assignedInvestigator={
+              complaint.data.assignedOfficers.length > 0
+                ? complaint.data.assignedOfficers[0]
+                : null
+            }
           />
           <UpdateStatusPanel
-            complaintId={complaint.id}
-            currentStatus={complaint.status}
+            complaintId={complaint.data.id}
+            currentStatus={complaint.data.status}
           />
         </div>
       </div>
@@ -184,7 +189,7 @@ function Dd({ label, value }: { label: string; value: string }) {
 function StatusTimeline({ complaintId }: { complaintId: string }) {
   const { data: history } = useStatusHistory(complaintId);
 
-  if (!history || history.length === 0) {
+  if (!history || history.data.length === 0) {
     return (
       <Card padding="none">
         <CardHeader>
@@ -204,12 +209,12 @@ function StatusTimeline({ complaintId }: { complaintId: string }) {
       </CardHeader>
       <CardBody>
         <ol className="relative border-l border-gray-200 pl-6">
-          {history.map((entry: StatusHistoryEntry) => (
+          {history.data.map((entry: StatusHistoryEntry) => (
             <li key={entry.id} className="mb-6 last:mb-0">
               <span className="absolute -left-1.5 h-3 w-3 rounded-full border-2 border-white bg-primary-500" />
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={statusVariant[entry.status] ?? 'default'}>
-                  {statusLabel[entry.status] ?? entry.status}
+                <Badge variant={statusVariant[entry.newStatus] ?? 'default'}>
+                  {statusLabel[entry.newStatus] ?? entry.newStatus}
                 </Badge>
                 <time className="text-xs text-gray-400">
                   {new Date(entry.createdAt).toLocaleString()}

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/hooks/useAuth';
+import { formatUserRole } from '@/types/auth';
 
 /** Institutional top bar for dashboard pages. */
 export function Topbar() {
@@ -32,8 +33,8 @@ export function Topbar() {
       <div className="ml-auto flex items-center gap-4">
         {/* Role badge */}
         {user && (
-          <span className="hidden rounded bg-primary-50 px-2 py-0.5 text-xs font-medium capitalize text-primary-700 md:inline-block">
-            {user.role}
+          <span className="hidden rounded bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700 md:inline-block">
+            {formatUserRole(user.role)}
           </span>
         )}
 

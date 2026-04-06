@@ -29,23 +29,22 @@ const statusBadge: Record<
 
 export function DashboardOverviewPage() {
   const { data, isLoading, isError, refetch } = useDashboardStats();
-
   if (isLoading) return <DashboardSkeleton />;
   if (isError)
     return <ErrorState title="Failed to load dashboard" onRetry={() => void refetch()} />;
   if (!data) return null;
 
   const stats = [
-    { label: 'Total Complaints', value: data.totalComplaints, color: 'text-primary-700' },
-    { label: 'Pending Review', value: data.pendingComplaints, color: 'text-warning-600' },
+    { label: 'Total Complaints', value: data.data.stats.totalComplaints, color: 'text-primary-700' },
+    { label: 'Pending Review', value: data.data.stats.pendingEscalations, color: 'text-warning-600' },
     {
       label: 'Investigating',
-      value: data.investigatingComplaints,
+      value: data.data.stats.openComplaints - data.data.stats.pendingEscalations,
       color: 'text-accent-600',
     },
-    { label: 'Resolved', value: data.resolvedComplaints, color: 'text-success-600' },
-    { label: 'Officers', value: data.totalOfficers, color: 'text-primary-600' },
-    { label: 'Stations', value: data.totalStations, color: 'text-gray-600' },
+    { label: 'Resolved', value: data.data.stats.resolvedComplaints, color: 'text-success-600' },
+    { label: 'Officers', value: data.data.stats.totalOfficers, color: 'text-primary-600' },
+    { label: 'Stations', value: data.data.stats.totalStations, color: 'text-gray-600' },
   ];
 
   return (
@@ -76,13 +75,13 @@ export function DashboardOverviewPage() {
           </Link>
         </div>
 
-        {data.recentComplaints.length === 0 ? (
+        {data.data.recentComplaints.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-gray-500">
             No recent complaints.
           </p>
         ) : (
           <div className="divide-y divide-gray-100">
-            {data.recentComplaints.map((c) => {
+            {data.data.recentComplaints.map((c) => {
               const badge = statusBadge[c.status] ?? {
                 label: c.status,
                 variant: 'default' as const,
@@ -95,10 +94,10 @@ export function DashboardOverviewPage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">
-                      {c.reference}
+                      {c.referenceNumber}
                     </p>
                     <p className="truncate text-xs text-gray-500">
-                      {c.category} — {c.title}
+                      {c.severity} — {c.title}
                     </p>
                   </div>
                   <Badge variant={badge.variant}>{badge.label}</Badge>

@@ -1,11 +1,11 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import type { UserRole } from '@/types/auth';
+import type { AuthUser, UserRole } from '@/types/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  /** If specified, only users with one of these roles may access the route. */
   allowedRoles?: UserRole[];
+  canAccess?: (user: AuthUser) => boolean;
 }
 
 /**
@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
  * - Unauthenticated users are redirected to `/login`.
  * - Authenticated users without an allowed role see a 403 message.
  */
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles, canAccess }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
@@ -30,6 +30,17 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 text-center">
+        <h1 className="text-2xl font-bold text-danger-700">Access Denied</h1>
+        <p className="text-sm text-gray-600">
+          You do not have permission to access this page.
+        </p>
+      </div>
+    );
+  }
+
+  if (canAccess && user && !canAccess(user)) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 text-center">
         <h1 className="text-2xl font-bold text-danger-700">Access Denied</h1>

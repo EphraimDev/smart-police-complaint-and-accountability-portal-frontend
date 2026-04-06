@@ -18,7 +18,9 @@ const mockUser: AuthUser = {
   fullName: 'Superintendent Abubakar',
   firstName: 'Superintendent',
   lastName: 'Abubakar',
-  role: 'admin',
+  role: 'ADMIN',
+  roles: ['ADMIN'],
+  permissions: ['user:read', 'report:view'],
 };
 
 /* ── Mock officers ── */
@@ -147,6 +149,38 @@ const mockComplaintResult: ComplaintResult = {
   ],
 };
 
+function buildLoginResponse(): LoginResponse {
+  return {
+    success: true,
+    message: 'Login successful',
+    correlationId: 'corr-login-001',
+    data: {
+      user: {
+        id: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        roles: ['ADMIN'],
+      },
+      tokens: {
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+        expiresIn: '15m',
+        tokenType: 'Bearer',
+      },
+    },
+  };
+}
+
+function buildPermissionsResponse() {
+  return {
+    data: [
+      { id: 'perm-1', name: 'user:read' },
+      { id: 'perm-2', name: 'report:view' },
+    ],
+  };
+}
+
 /**
  * Default request handlers for MSW — aligned with the real API at /api/v1.
  */
@@ -179,14 +213,41 @@ export const handlers = [
   http.post('/api/v1/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email?: string; password?: string };
     if (body.email === 'admin@npf.gov.ng' && body.password === 'password123') {
-      const response: LoginResponse = {
-        user: mockUser,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-      };
-      return HttpResponse.json(response);
+      return HttpResponse.json(buildLoginResponse());
     }
-    return HttpResponse.json({ message: 'Invalid email or password' }, { status: 401 });
+    return HttpResponse.json({ message: 'Invalid credentials' }, { status: 401 });
+  }),
+  http.post('http://localhost:3006/api/v1/auth/login', async ({ request }) => {
+    const body = (await request.json()) as { email?: string; password?: string };
+    if (body.email === 'admin@npf.gov.ng' && body.password === 'password123') {
+      return HttpResponse.json(buildLoginResponse());
+    }
+    return HttpResponse.json({ message: 'Invalid credentials' }, { status: 401 });
+  }),
+
+  http.get('/api/v1/permissions', () => {
+    return HttpResponse.json(buildPermissionsResponse());
+  }),
+  http.get('http://localhost:3006/api/v1/permissions', () => {
+    return HttpResponse.json(buildPermissionsResponse());
+  }),
+  http.get('/api/v1/roles', () => {
+    return HttpResponse.json({
+      data: [
+        { id: 'role-super-admin', name: 'SUPER_ADMIN' },
+        { id: 'role-admin', name: 'ADMIN' },
+        { id: 'role-investigator', name: 'INVESTIGATOR' },
+      ],
+    });
+  }),
+  http.get('http://localhost:3006/api/v1/roles', () => {
+    return HttpResponse.json({
+      data: [
+        { id: 'role-super-admin', name: 'SUPER_ADMIN' },
+        { id: 'role-admin', name: 'ADMIN' },
+        { id: 'role-investigator', name: 'INVESTIGATOR' },
+      ],
+    });
   }),
 
   // Refresh token
@@ -412,7 +473,7 @@ export const handlers = [
         lastName: 'Abubakar',
         fullName: 'Superintendent Abubakar',
         email: 'admin@npf.gov.ng',
-        role: 'admin',
+        role: 'ADMIN',
         isActive: true,
         stationName: 'Force HQ',
         createdAt: '2025-01-15T00:00:00Z',
@@ -424,7 +485,7 @@ export const handlers = [
         lastName: 'Chukwu',
         fullName: 'Emeka Chukwu',
         email: 'chukwu@npf.gov.ng',
-        role: 'officer',
+        role: 'POLICE_ADMIN',
         isActive: true,
         stationName: 'Ikeja Division',
         createdAt: '2025-03-10T00:00:00Z',
@@ -436,7 +497,122 @@ export const handlers = [
         lastName: 'Bello',
         fullName: 'Fatima Bello',
         email: 'fatima@npf.gov.ng',
-        role: 'supervisor',
+        role: 'OVERSIGHT_BODY',
+        isActive: true,
+        stationName: 'Wuse Division',
+        createdAt: '2025-06-01T00:00:00Z',
+      },
+    ];
+    const body: PaginatedResponse<AdminUser> = {
+      data: mockUsers,
+      total: 3,
+      page,
+      limit: 10,
+      totalPages: 1,
+    };
+    return HttpResponse.json(body);
+  }),
+  http.get('http://localhost:3006/api/v1/police-stations', ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const body: PaginatedResponse<Station> = {
+      data: mockStations,
+      total: 2,
+      page,
+      limit: 10,
+      totalPages: 1,
+    };
+    return HttpResponse.json(body);
+  }),
+  http.post('/api/v1/police-stations', async ({ request }) => {
+    const payload = (await request.json()) as {
+      name: string;
+      code: string;
+      address?: string;
+      region?: string;
+      phone?: string;
+      email?: string;
+    };
+
+    return HttpResponse.json(
+      {
+        id: 'st-003',
+        name: payload.name,
+        code: payload.code,
+        address: payload.address,
+        region: payload.region,
+        phone: payload.phone,
+        email: payload.email,
+        createdAt: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+  http.post('http://localhost:3006/api/v1/police-stations', async ({ request }) => {
+    const payload = (await request.json()) as {
+      name: string;
+      code: string;
+      address?: string;
+      region?: string;
+      phone?: string;
+      email?: string;
+    };
+
+    return HttpResponse.json(
+      {
+        id: 'st-003',
+        name: payload.name,
+        code: payload.code,
+        address: payload.address,
+        region: payload.region,
+        phone: payload.phone,
+        email: payload.email,
+        createdAt: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+  http.post('/api/v1/police-stations/bulk-upload', async () => {
+    return HttpResponse.json({ message: '2 stations uploaded successfully.', count: 2 });
+  }),
+  http.post('http://localhost:3006/api/v1/police-stations/bulk-upload', async () => {
+    return HttpResponse.json({ message: '2 stations uploaded successfully.', count: 2 });
+  }),
+  http.get('http://localhost:3006/api/v1/users', ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const mockUsers: AdminUser[] = [
+      {
+        id: 'usr-001',
+        firstName: 'Superintendent',
+        lastName: 'Abubakar',
+        fullName: 'Superintendent Abubakar',
+        email: 'admin@npf.gov.ng',
+        role: 'ADMIN',
+        isActive: true,
+        stationName: 'Force HQ',
+        createdAt: '2025-01-15T00:00:00Z',
+        lastLoginAt: '2026-04-04T09:00:00Z',
+      },
+      {
+        id: 'usr-002',
+        firstName: 'Emeka',
+        lastName: 'Chukwu',
+        fullName: 'Emeka Chukwu',
+        email: 'chukwu@npf.gov.ng',
+        role: 'POLICE_ADMIN',
+        isActive: true,
+        stationName: 'Ikeja Division',
+        createdAt: '2025-03-10T00:00:00Z',
+        lastLoginAt: '2026-04-03T14:30:00Z',
+      },
+      {
+        id: 'usr-003',
+        firstName: 'Fatima',
+        lastName: 'Bello',
+        fullName: 'Fatima Bello',
+        email: 'fatima@npf.gov.ng',
+        role: 'OVERSIGHT_BODY',
         isActive: true,
         stationName: 'Wuse Division',
         createdAt: '2025-06-01T00:00:00Z',
@@ -469,11 +645,39 @@ export const handlers = [
       lastName: payload.lastName,
       fullName: `${payload.firstName} ${payload.lastName}`,
       email: payload.email,
-      role: 'officer',
+      role: 'POLICE_ADMIN',
       isActive: true,
       createdAt: new Date().toISOString(),
     };
     return HttpResponse.json(newUser, { status: 201 });
+  }),
+  http.post('/api/v1/users/bulk-upload', async ({ request }) => {
+    const formData = await request.formData();
+    const file = formData.get('file');
+
+    if (!(file instanceof File)) {
+      return HttpResponse.json({ message: 'File is required.' }, { status: 400 });
+    }
+
+    return HttpResponse.json({
+      message: '2 users uploaded successfully.',
+      count: 2,
+      fileName: file.name,
+    });
+  }),
+  http.post('http://localhost:3006/api/v1/users/bulk-upload', async ({ request }) => {
+    const formData = await request.formData();
+    const file = formData.get('file');
+
+    if (!(file instanceof File)) {
+      return HttpResponse.json({ message: 'File is required.' }, { status: 400 });
+    }
+
+    return HttpResponse.json({
+      message: '2 users uploaded successfully.',
+      count: 2,
+      fileName: file.name,
+    });
   }),
 
   http.put('/api/v1/users/:id', async ({ request, params }) => {

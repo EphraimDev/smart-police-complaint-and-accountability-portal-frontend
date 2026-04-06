@@ -23,6 +23,13 @@ import {
 } from '@/pages/dashboard';
 import { UserManagementPage } from '@/pages/admin';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import {
+  canAccessAnalytics,
+  canAccessComplaints,
+  canAccessOfficers,
+  canAccessStations,
+  canAccessUserManagement,
+} from '@/access-control';
 
 export const routes: RouteObject[] = [
   /* ── Public routes ── */
@@ -62,27 +69,51 @@ export const routes: RouteObject[] = [
       { index: true, element: <DashboardOverviewPage /> },
       {
         path: 'complaints',
-        element: <ComplaintsListPage />,
+        element: (
+          <ProtectedRoute canAccess={canAccessComplaints}>
+            <ComplaintsListPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'complaints/:id',
-        element: <ComplaintDetailPage />,
+        element: (
+          <ProtectedRoute canAccess={canAccessComplaints}>
+            <ComplaintDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'officers',
-        element: <OfficersListPage />,
+        element: (
+          <ProtectedRoute canAccess={canAccessOfficers}>
+            <OfficersListPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'stations',
-        element: <StationsListPage />,
+        element: (
+          <ProtectedRoute canAccess={canAccessStations}>
+            <StationsListPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'analytics',
-        element: <ReportsPage />,
+        element: (
+          <ProtectedRoute canAccess={canAccessAnalytics}>
+            <ReportsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'users',
-        element: <UserManagementPage />,
+        element: (
+          <ProtectedRoute canAccess={canAccessUserManagement}>
+            <UserManagementPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'settings',

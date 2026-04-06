@@ -20,10 +20,41 @@ describe('StationsListPage', () => {
     expect(screen.getByText('FCT')).toBeInTheDocument();
   });
 
+  it('renders add station and bulk upload buttons', async () => {
+    render(<StationsListPage />);
+
+    expect(await screen.findByRole('button', { name: /add station/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /bulk upload stations/i })).toBeInTheDocument();
+  });
+
+  it('opens create station modal', async () => {
+    const { user } = render(<StationsListPage />);
+
+    await user.click(await screen.findByRole('button', { name: /add station/i }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /add station/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/station name/i)).toBeInTheDocument();
+  });
+
+  it('opens bulk upload stations modal', async () => {
+    const { user } = render(<StationsListPage />);
+
+    await user.click(await screen.findByRole('button', { name: /bulk upload stations/i }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /bulk upload stations/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/station upload file/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /download station template/i })).toBeInTheDocument();
+    expect(screen.getByText(/sample station template/i)).toBeInTheDocument();
+  });
+
   it('shows empty state when no stations', async () => {
     server.use(
-      http.get('/api/dashboard/stations', () =>
-        HttpResponse.json({ data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 }),
+      http.get('http://localhost:3006/api/v1/police-stations', () =>
+        HttpResponse.json({ data: [], total: 0, page: 1, limit: 10, totalPages: 0 }),
       ),
     );
 
@@ -34,7 +65,7 @@ describe('StationsListPage', () => {
 
   it('shows error state with retry', async () => {
     server.use(
-      http.get('/api/dashboard/stations', () =>
+      http.get('http://localhost:3006/api/v1/police-stations', () =>
         HttpResponse.json({ message: 'fail' }, { status: 500 }),
       ),
     );

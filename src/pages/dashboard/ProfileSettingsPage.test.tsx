@@ -11,7 +11,11 @@ function renderWithAuth() {
       id: 'usr-001',
       email: 'admin@npf.gov.ng',
       fullName: 'Superintendent Abubakar',
-      role: 'admin',
+      firstName: 'Superintendent',
+      lastName: 'Abubakar',
+      role: 'ADMIN',
+      roles: ['ADMIN'],
+      permissions: [],
     }),
   );
   return render(<ProfileSettingsPage />);
@@ -43,8 +47,10 @@ describe('ProfileSettingsPage', () => {
       expect(screen.getByText('Edit Profile')).toBeInTheDocument();
     });
 
-    const nameInput = screen.getByLabelText('Full Name') as HTMLInputElement;
-    expect(nameInput.value).toBe('Superintendent Abubakar');
+    const firstNameInput = screen.getByLabelText('First Name') as HTMLInputElement;
+    const lastNameInput = screen.getByLabelText('Last Name') as HTMLInputElement;
+    expect(firstNameInput.value).toBe('Superintendent');
+    expect(lastNameInput.value).toBe('Abubakar');
   });
 
   it('renders Change Password form', async () => {

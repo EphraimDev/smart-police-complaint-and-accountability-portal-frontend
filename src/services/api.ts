@@ -4,22 +4,30 @@ import type {
   PaginatedResponse,
   Officer,
   Station,
+  CreateStationPayload,
   AssignComplaintPayload,
   UpdateStatusPayload,
   StatusHistoryEntry,
   ComplaintNote,
   ComplaintAssignment,
+  StatusHistoryEntryResponse,
 } from '@/types/dashboard';
 import type {
   ReportsData,
   ReportFilters,
   AdminUser,
   CreateUserPayload,
+  RoleOption,
   UpdateUserPayload,
   ProfileUpdatePayload,
   ChangePasswordPayload,
 } from '@/types/reports';
-import type { LoginResponse, LoginFormData } from '@/types/auth';
+import type {
+  LoginResponse,
+  LoginFormData,
+  PermissionValue,
+  RefreshTokenResponse,
+} from '@/types/auth';
 import type {
   ComplaintFormData,
   ComplaintSubmissionResponse,
@@ -68,6 +76,18 @@ function authHeaders(): HeadersInit {
 
 let refreshPromise: Promise<string> | null = null;
 
+function extractTokens(response: RefreshTokenResponse) {
+  const tokens = response.data?.tokens;
+  const accessToken = tokens?.accessToken ?? response.accessToken;
+  const refreshToken = tokens?.refreshToken ?? response.refreshToken;
+
+  if (!accessToken || !refreshToken) {
+    throw new Error('Refresh response did not include tokens');
+  }
+
+  return { accessToken, refreshToken };
+}
+
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) throw new Error('No refresh token available');
@@ -83,9 +103,10 @@ async function refreshAccessToken(): Promise<string> {
     throw new Error('Session expired. Please log in again.');
   }
 
-  const data = (await res.json()) as { accessToken: string; refreshToken: string };
-  setTokens(data.accessToken, data.refreshToken);
-  return data.accessToken;
+  const data = (await res.json()) as RefreshTokenResponse;
+  const tokens = extractTokens(data);
+  setTokens(tokens.accessToken, tokens.refreshToken);
+  return tokens.accessToken;
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -98,39 +119,48 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
   // Auto-refresh on 401
   if (res.status === 401 && getRefreshToken()) {
+    let newToken: string;
+
     try {
       if (!refreshPromise) {
         refreshPromise = refreshAccessToken();
       }
-      const newToken = await refreshPromise;
-      refreshPromise = null;
-
-      // Retry the original request with the new token
-      const retryRes = await fetch(fullUrl, {
-        ...init,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${newToken}`,
-          ...init?.headers,
-        },
-      });
-
-      if (!retryRes.ok) {
-        const body = await retryRes.json().catch(() => ({}));
-        throw new Error(
-          (body as { message?: string }).message ?? `Request failed (${retryRes.status})`,
-        );
-      }
-
-      // Handle 204 No Content
-      if (retryRes.status === 204) return {} as T;
-      return retryRes.json() as Promise<T>;
+      newToken = await refreshPromise;
     } catch {
       refreshPromise = null;
       clearTokens();
       window.location.href = '/login';
       throw new Error('Session expired. Please log in again.');
+    } finally {
+      refreshPromise = null;
     }
+
+    // Retry the original request with the new token
+    const retryRes = await fetch(fullUrl, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${newToken}`,
+        ...init?.headers,
+      },
+    });
+
+    if (retryRes.status === 401) {
+      clearTokens();
+      window.location.href = '/login';
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    if (!retryRes.ok) {
+      const body = await retryRes.json().catch(() => ({}));
+      throw new Error(
+        (body as { message?: string }).message ?? `Request failed (${retryRes.status})`,
+      );
+    }
+
+    // Handle 204 No Content
+    if (retryRes.status === 204) return {} as T;
+    return retryRes.json() as Promise<T>;
   }
 
   if (!res.ok) {
@@ -175,7 +205,7 @@ export async function login(data: LoginFormData): Promise<LoginResponse> {
     body: JSON.stringify({ ...data, deviceInfo: navigator.userAgent }),
     // headers: { 'user-agent': navigator.userAgent },
   });
-  setTokens(response.accessToken, response.refreshToken);
+  setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
   return response;
 }
 
@@ -231,6 +261,28 @@ export function createUser(payload: CreateUserPayload): Promise<AdminUser> {
   });
 }
 
+export function bulkUploadUsers(file: File): Promise<{ message?: string; count?: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return fetch(`${API_BASE}/users/bulk-upload`, {
+    method: 'POST',
+    headers: {
+      ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
+    },
+    body: formData,
+  }).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(
+        (body as { message?: string }).message ?? `Request failed (${res.status})`,
+      );
+    }
+
+    return res.json() as Promise<{ message?: string; count?: number }>;
+  });
+}
+
 export function updateUser(id: string, payload: UpdateUserPayload): Promise<AdminUser> {
   return request(`/users/${id}`, {
     method: 'PUT',
@@ -264,14 +316,71 @@ export function updateProfile(payload: ProfileUpdatePayload): Promise<AdminUser>
    Roles & Permissions
    ═══════════════════════════════════════════════ */
 
-export function fetchRoles(): Promise<
-  Array<{ id: string; name: string; description?: string }>
-> {
-  return request('/roles');
+function extractRoleOptions(payload: unknown): RoleOption[] {
+  if (Array.isArray(payload)) {
+    return payload.flatMap((entry) => extractRoleOptions(entry));
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const record = payload as Record<string, unknown>;
+  const id = record.id;
+  const name = record.name;
+
+  if (typeof id === 'string' && typeof name === 'string') {
+    return [
+      {
+        id,
+        name,
+        description: typeof record.description === 'string' ? record.description : undefined,
+      },
+    ];
+  }
+
+  return ['data', 'roles', 'items', 'results'].flatMap((key) => extractRoleOptions(record[key]));
 }
 
-export function fetchPermissions(): Promise<Array<{ id: string; name: string }>> {
-  return request('/permissions');
+export async function fetchRoles(): Promise<RoleOption[]> {
+  const response = await request<unknown>('/roles');
+  return extractRoleOptions(response);
+}
+
+function extractPermissionNames(payload: unknown): PermissionValue[] {
+  if (typeof payload === 'string') {
+    return [payload.trim().toLowerCase() as PermissionValue];
+  }
+
+  if (Array.isArray(payload)) {
+    return Array.from(new Set(payload.flatMap((entry) => extractPermissionNames(entry))));
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const record = payload as Record<string, unknown>;
+  const directName = ['name', 'permission', 'value', 'code']
+    .map((key) => record[key])
+    .find((value): value is string => typeof value === 'string' && value.includes(':'));
+
+  if (directName) {
+    return [directName.trim().toLowerCase() as PermissionValue];
+  }
+
+  return Array.from(
+    new Set(
+      ['data', 'permissions', 'items', 'results']
+        .flatMap((key) => extractPermissionNames(record[key]))
+        .filter(Boolean),
+    ),
+  );
+}
+
+export async function fetchPermissions(): Promise<PermissionValue[]> {
+  const response = await request<unknown>('/permissions');
+  return extractPermissionNames(response);
 }
 
 /* ═══════════════════════════════════════════════
@@ -425,7 +534,7 @@ export function reassignComplaint(
    Complaint Status History
    ═══════════════════════════════════════════════ */
 
-export function fetchStatusHistory(complaintId: string): Promise<StatusHistoryEntry[]> {
+export function fetchStatusHistory(complaintId: string): Promise<StatusHistoryEntryResponse> {
   return request(`/complaint-status-history/${complaintId}`);
 }
 
@@ -463,6 +572,35 @@ export function fetchStations(
 
 export function fetchStation(id: string): Promise<Station> {
   return request(`/police-stations/${id}`);
+}
+
+export function createStation(payload: CreateStationPayload): Promise<Station> {
+  return request('/police-stations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function bulkUploadStations(file: File): Promise<{ message?: string; count?: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return fetch(`${API_BASE}/police-stations/bulk-upload`, {
+    method: 'POST',
+    headers: {
+      ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
+    },
+    body: formData,
+  }).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(
+        (body as { message?: string }).message ?? `Request failed (${res.status})`,
+      );
+    }
+
+    return res.json() as Promise<{ message?: string; count?: number }>;
+  });
 }
 
 /* ═══════════════════════════════════════════════

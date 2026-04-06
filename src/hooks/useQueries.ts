@@ -11,19 +11,28 @@ import {
   fetchOfficers,
   fetchOfficer,
   fetchStations,
+  createStation,
+  bulkUploadStations,
   fetchReports,
   fetchUsers,
+  fetchRoles,
   createUser,
+  bulkUploadUsers,
   updateUser,
   deactivateUser,
   updateProfile,
   changePassword,
   fetchStatusHistory,
 } from '@/services/api';
-import type { AssignComplaintPayload, UpdateStatusPayload } from '@/types/dashboard';
+import type {
+  AssignComplaintPayload,
+  CreateStationPayload,
+  UpdateStatusPayload,
+} from '@/types/dashboard';
 import type {
   ReportFilters,
   CreateUserPayload,
+  RoleOption,
   UpdateUserPayload,
   ProfileUpdatePayload,
   ChangePasswordPayload,
@@ -43,6 +52,7 @@ export const queryKeys = {
   reports: (filters?: ReportFilters) => ['reports', filters] as const,
   users: (page: number) => ['admin', 'users', page] as const,
   user: (id: string) => ['admin', 'users', id] as const,
+  roles: ['admin', 'roles'] as const,
 };
 
 /* ── Dashboard ── */
@@ -154,6 +164,26 @@ export function useStations(page = 1) {
   });
 }
 
+export function useCreateStation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateStationPayload) => createStation(payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['stations'] });
+    },
+  });
+}
+
+export function useBulkUploadStations() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => bulkUploadStations(file),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['stations'] });
+    },
+  });
+}
+
 /* ── Reports ── */
 
 export function useReports(filters?: ReportFilters) {
@@ -172,10 +202,27 @@ export function useUsers(page = 1) {
   });
 }
 
+export function useRoles() {
+  return useQuery<RoleOption[]>({
+    queryKey: queryKeys.roles,
+    queryFn: fetchRoles,
+  });
+}
+
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateUserPayload) => createUser(payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+export function useBulkCreateUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => bulkUploadUsers(file),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
