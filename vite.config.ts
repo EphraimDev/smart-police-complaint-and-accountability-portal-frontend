@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       open: false,
+      allowedHosts: ['spcap.com.ng', 'www.spcap.com.ng'],
     },
     test: {
       globals: true,
