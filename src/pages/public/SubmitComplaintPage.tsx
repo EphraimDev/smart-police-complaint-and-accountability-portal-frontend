@@ -12,7 +12,6 @@ import {
 import { submitComplaint } from '@/services/api';
 
 const MAX_FILES = 10;
-const ACCEPTED_TYPES = ['application/pdf', 'image/*', 'audio/*', 'video/*'];
 const ACCEPT_STRING = 'application/pdf,image/*,audio/*,video/*';
 
 function isAcceptedType(file: File): boolean {

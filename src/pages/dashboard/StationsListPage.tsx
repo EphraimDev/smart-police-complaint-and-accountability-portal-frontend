@@ -11,7 +11,6 @@ import { ErrorState } from '@/components/ErrorState';
 import type { CreateStationPayload, Station } from '@/types/dashboard';
 
 const STATION_BULK_UPLOAD_TEMPLATE_PATH = '/templates/police_station_bulk_upload_template.csv';
-const STATION_BULK_UPLOAD_TEMPLATE_PREVIEW = 'name,code,address,region,phone,email';
 
 export function StationsListPage() {
   const [page, setPage] = useState(1);
@@ -290,16 +289,5 @@ function BulkUploadStationsModal({
         </div>
       </div>
     </Modal>
-  );
-}
-
-function TemplatePreview({ title, lines }: { title: string; lines: string[] }) {
-  return (
-    <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
-      <p className="text-sm font-medium text-gray-700">{title}</p>
-      <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs text-gray-600">
-        {lines.join('\n')}
-      </pre>
-    </div>
   );
 }
