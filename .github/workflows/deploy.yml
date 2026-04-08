@@ -1,0 +1,61 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT != '' && secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      PM2_APP_NAME: ${{ secrets.PM2_APP_NAME != '' && secrets.PM2_APP_NAME || 'spcap-fe' }}
+      PREVIEW_PORT: ${{ secrets.PREVIEW_PORT != '' && secrets.PREVIEW_PORT || '4173' }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Install, build, and restart PM2 on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: ${{ env.DEPLOY_PORT }}
+          fingerprint: ${{ secrets.DEPLOY_FINGERPRINT }}
+          script_stop: true
+          script: |
+            set -e
+            mkdir -p "${{ env.DEPLOY_PATH }}"
+            cd "${{ env.DEPLOY_PATH }}"
+            npm ci
+            npm run build
+
+            if pm2 describe "${{ env.PM2_APP_NAME }}" >/dev/null 2>&1; then
+              pm2 restart "${{ env.PM2_APP_NAME }}" --update-env
+            else
+              pm2 start npm --name "${{ env.PM2_APP_NAME }}" -- run preview -- --host 0.0.0.0 --port "${{ env.PREVIEW_PORT }}"
+            fi
+
+            pm2 save
