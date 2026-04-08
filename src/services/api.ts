@@ -34,6 +34,13 @@ import type {
   ComplaintSubmissionResponse,
   ComplaintResult,
 } from '@/types/complaint';
+import {
+  buildPayloadContext,
+  decryptPayload,
+  encryptPayload,
+  isEncryptedPayloadEnvelope,
+  isPayloadEncryptionEnabled,
+} from '@/services/payloadEncryption';
 
 /* ═══════════════════════════════════════════════
    Common API Client
@@ -63,16 +70,6 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
-/* ── Headers ── */
-
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 /* ── Core request helper with token refresh ── */
 
 let refreshPromise: Promise<string> | null = null;
@@ -93,10 +90,15 @@ async function refreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) throw new Error('No refresh token available');
 
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
+  const refreshUrl = `${API_BASE}/auth/refresh`;
+  const res = await fetch(refreshUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+    headers: await buildJsonHeaders(undefined),
+    body: await serializeRequestBody(
+      refreshUrl,
+      { method: 'POST' },
+      { refreshToken },
+    ),
   });
 
   if (!res.ok) {
@@ -104,7 +106,7 @@ async function refreshAccessToken(): Promise<string> {
     throw new Error('Session expired. Please log in again.');
   }
 
-  const data = (await res.json()) as RefreshTokenResponse;
+  const data = await parseJsonResponse<RefreshTokenResponse>(res, refreshUrl, 'POST');
   const tokens = extractTokens(data);
   setTokens(tokens.accessToken, tokens.refreshToken);
   return tokens.accessToken;
@@ -115,7 +117,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
   const res = await fetch(fullUrl, {
     ...init,
-    headers: { ...authHeaders(), ...init?.headers },
+    headers: await buildJsonHeaders(init?.headers),
+    body: await serializeRequestBody(fullUrl, init, init?.body),
   });
 
   // Auto-refresh on 401
@@ -139,11 +142,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     // Retry the original request with the new token
     const retryRes = await fetch(fullUrl, {
       ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${newToken}`,
-        ...init?.headers,
-      },
+      headers: await buildJsonHeaders(init?.headers, newToken),
+      body: await serializeRequestBody(fullUrl, init, init?.body),
     });
 
     if (retryRes.status === 401) {
@@ -153,7 +153,11 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     }
 
     if (!retryRes.ok) {
-      const body = await retryRes.json().catch(() => ({}));
+      const body = await parseJsonResponse<{ message?: string }>(
+        retryRes,
+        fullUrl,
+        init?.method,
+      ).catch(() => ({}));
       throw new Error(
         (body as { message?: string }).message ?? `Request failed (${retryRes.status})`,
       );
@@ -161,11 +165,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
     // Handle 204 No Content
     if (retryRes.status === 204) return {} as T;
-    return retryRes.json() as Promise<T>;
+    return parseJsonResponse<T>(retryRes, fullUrl, init?.method);
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+    const body = await parseJsonResponse<{ message?: string }>(res, fullUrl, init?.method).catch(
+      () => ({}),
+    );
     throw new Error(
       (body as { message?: string }).message ?? `Request failed (${res.status})`,
     );
@@ -173,7 +179,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
   // Handle 204 No Content
   if (res.status === 204) return {} as T;
-  return res.json() as Promise<T>;
+  return parseJsonResponse<T>(res, fullUrl, init?.method);
 }
 
 /* ── Public request (no auth headers) ── */
@@ -182,18 +188,125 @@ async function publicRequest<T>(url: string, init?: RequestInit): Promise<T> {
   const fullUrl = `${API_BASE}${url}`;
   const res = await fetch(fullUrl, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: await buildJsonHeaders(init?.headers, null),
+    body: await serializeRequestBody(fullUrl, init, init?.body),
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+    const body = await parseJsonResponse<{ message?: string }>(res, fullUrl, init?.method).catch(
+      () => ({}),
+    );
     throw new Error(
       (body as { message?: string }).message ?? `Request failed (${res.status})`,
     );
   }
 
   if (res.status === 204) return {} as T;
-  return res.json() as Promise<T>;
+  return parseJsonResponse<T>(res, fullUrl, init?.method);
+}
+
+async function buildJsonHeaders(
+  initHeaders?: HeadersInit,
+  accessToken = getAccessToken(),
+): Promise<HeadersInit> {
+  const headers = new Headers(initHeaders);
+
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (accessToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  if (isPayloadEncryptionEnabled()) {
+    headers.set('x-payload-encrypted', 'true');
+  }
+
+  return Object.fromEntries(headers.entries());
+}
+
+async function serializeRequestBody(
+  url: string,
+  init: RequestInit | undefined,
+  body: unknown,
+): Promise<BodyInit | null | undefined> {
+  if (!body || !shouldEncryptRequestBody(init, body)) {
+    if (typeof body === 'string' || body instanceof FormData || body instanceof URLSearchParams) {
+      return body;
+    }
+
+    if (body instanceof Blob || body instanceof ArrayBuffer || body instanceof ReadableStream) {
+      return body;
+    }
+
+    return typeof body === 'object' ? JSON.stringify(body) : (body as BodyInit | undefined);
+  }
+
+  const parsedBody =
+    typeof body === 'string'
+      ? (JSON.parse(body) as unknown)
+      : body;
+
+  const envelope = await encryptPayload(
+    parsedBody,
+    buildPayloadContext(init?.method ?? 'GET', url),
+  );
+
+  return JSON.stringify({ payload: envelope.payload });
+}
+
+function shouldEncryptRequestBody(
+  init: RequestInit | undefined,
+  body: unknown,
+): boolean {
+  if (!isPayloadEncryptionEnabled()) {
+    return false;
+  }
+
+  const method = (init?.method ?? 'GET').toUpperCase();
+  if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    return false;
+  }
+
+  if (
+    typeof body !== 'string' &&
+    (typeof body !== 'object' || !body || body instanceof FormData || body instanceof Blob)
+  ) {
+    return false;
+  }
+
+  const headers = new Headers(init?.headers);
+  const contentType = headers.get('Content-Type') ?? headers.get('content-type');
+
+  return contentType?.includes('application/json') ?? true;
+}
+
+async function parseJsonResponse<T>(
+  response: Response,
+  url: string,
+  method = 'GET',
+): Promise<T> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Expected a JSON response.');
+  }
+
+  const payload = (await response.json()) as unknown;
+
+  if (
+    isPayloadEncryptionEnabled() &&
+    (response.headers.get('x-payload-encrypted') === 'true' ||
+      isEncryptedPayloadEnvelope(payload))
+  ) {
+    if (!isEncryptedPayloadEnvelope(payload)) {
+      throw new Error('Encrypted response payload is missing or invalid.');
+    }
+
+    return decryptPayload<T>(payload, buildPayloadContext(method, url));
+  }
+
+  return payload as T;
 }
 
 /* ═══════════════════════════════════════════════

@@ -40,6 +40,41 @@ See [`.env.example`](.env.example) for all available variables:
 | `VITE_APP_NAME`       | Full application name          | Smart Police Complaint & Accountability Portal |
 | `VITE_APP_SHORT_NAME` | Short name                     | SPCAP                                          |
 | `VITE_ENABLE_MSW`     | Enable MSW for browser mocking | `false`                                        |
+| `VITE_PAYLOAD_ENCRYPTION_ENABLED` | Enable JSON payload encryption | `false`                            |
+| `VITE_PAYLOAD_ENCRYPTION_KEY` | Shared secret used to derive the AES key | unset                    |
+| `VITE_PAYLOAD_ENCRYPTION_ALGORITHM` | Payload encryption algorithm | `aes-256-gcm`                       |
+| `VITE_PAYLOAD_ENCRYPTION_IV_LENGTH` | AES-GCM IV length in bytes | `12`                                  |
+| `VITE_PAYLOAD_ENCRYPTION_TAG_LENGTH` | AES-GCM auth tag length in bytes | `16`                       |
+| `VITE_ENCRYPTED_PAYLOAD_SEPARATOR` | Separator used in serialized encrypted payloads | `.`        |
+
+## Payload Encryption
+
+The frontend supports JSON payload encryption through [`src/services/payloadEncryption.ts`](src/services/payloadEncryption.ts) and applies it centrally in [`src/services/api.ts`](src/services/api.ts).
+
+When `VITE_PAYLOAD_ENCRYPTION_ENABLED=true`:
+
+- Outgoing JSON request bodies are encrypted before being sent to the backend.
+- Incoming encrypted JSON responses are automatically decrypted before the app consumes them.
+- The payload format matches the backend contract: `{ encrypted: true, algorithm, payload }`.
+- The serialized `payload` value uses backend-compatible `iv.tag.ciphertext` base64url segments.
+- Additional authenticated data (AAD) is derived from the direction, HTTP method, and request path, so frontend and backend settings must match.
+
+Recommended values:
+
+```env
+VITE_PAYLOAD_ENCRYPTION_ENABLED=true
+VITE_PAYLOAD_ENCRYPTION_KEY=your-shared-secret
+VITE_PAYLOAD_ENCRYPTION_ALGORITHM=aes-256-gcm
+VITE_PAYLOAD_ENCRYPTION_IV_LENGTH=12
+VITE_PAYLOAD_ENCRYPTION_TAG_LENGTH=16
+VITE_ENCRYPTED_PAYLOAD_SEPARATOR=.
+```
+
+Notes:
+
+- Only JSON requests sent through the shared API client are encrypted automatically.
+- `FormData` uploads such as file upload endpoints are intentionally not encrypted by this helper.
+- The frontend and backend must share the same secret, algorithm, IV length, tag length, and separator.
 
 ## Scripts
 
@@ -112,7 +147,8 @@ src/
 │   ├── ProtectedRoute.tsx   # Auth guard with role checking
 │   └── routes.tsx           # All route definitions
 ├── services/
-│   └── api.ts           # Typed fetch-based API service layer
+│   ├── api.ts                # Typed fetch-based API service layer
+│   └── payloadEncryption.ts  # JSON request/response encryption helpers
 ├── store/
 │   └── AuthContext.tsx   # Auth provider (login, logout, persistence)
 ├── test/
