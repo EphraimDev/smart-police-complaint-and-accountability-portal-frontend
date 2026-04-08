@@ -34,7 +34,12 @@ const adminUser: AuthUser = {
   lastName: 'Abubakar',
   role: 'ADMIN',
   roles: ['ADMIN'],
-  permissions: [Permission.USER_READ, Permission.OFFICER_READ, Permission.REPORT_VIEW],
+  permissions: [
+    Permission.USER_READ,
+    Permission.OFFICER_READ,
+    Permission.REPORT_VIEW,
+    Permission.AUDIT_READ,
+  ],
 };
 
 const officerUser: AuthUser = {
@@ -92,6 +97,7 @@ describe('DashboardLayout – role-aware navigation', () => {
 
     expect(screen.getByText('Officers')).toBeInTheDocument();
     expect(screen.getByText('Analytics')).toBeInTheDocument();
+    expect(screen.getByText('Audit Trail')).toBeInTheDocument();
     expect(screen.getByText('Users')).toBeInTheDocument();
   });
 
@@ -105,6 +111,7 @@ describe('DashboardLayout – role-aware navigation', () => {
     expect(screen.queryByText('Officers')).not.toBeInTheDocument();
     expect(screen.queryByText('Complaints')).not.toBeInTheDocument();
     expect(screen.queryByText('Analytics')).not.toBeInTheDocument();
+    expect(screen.queryByText('Audit Trail')).not.toBeInTheDocument();
     expect(screen.queryByText('Users')).not.toBeInTheDocument();
     // Common items still visible
     expect(screen.getByText('Overview')).toBeInTheDocument();
@@ -120,6 +127,7 @@ describe('DashboardLayout – role-aware navigation', () => {
 
     expect(screen.queryByText('Users')).not.toBeInTheDocument();
     expect(screen.queryByText('Officers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Audit Trail')).not.toBeInTheDocument();
   });
 
   it('displays user name and role badge', async () => {

@@ -34,6 +34,7 @@ import type {
   ComplaintSubmissionResponse,
   ComplaintResult,
 } from '@/types/complaint';
+import type { AuditLogEntry, AuditLogListResponse } from '@/types/audit';
 import {
   buildPayloadContext,
   decryptPayload,
@@ -845,6 +846,88 @@ export function escalateComplaint(payload: {
 /* ═══════════════════════════════════════════════
    Health
    ═══════════════════════════════════════════════ */
+
+function normalizeAuditLogResponse(payload: unknown): AuditLogListResponse {
+  if (Array.isArray(payload)) {
+    return {
+      data: payload as AuditLogEntry[],
+      total: payload.length,
+      page: 1,
+      limit: payload.length || 20,
+      totalPages: 1,
+    };
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const collection =
+    record.data ??
+    record.items ??
+    record.results ??
+    (Array.isArray(record.logs) ? record.logs : undefined);
+  const entries = Array.isArray(collection) ? (collection as AuditLogEntry[]) : [];
+  const meta =
+    record.meta && typeof record.meta === 'object'
+      ? (record.meta as Record<string, unknown>)
+      : undefined;
+  const total = toNumber(meta?.totalItems) ?? toNumber(meta?.total) ?? toNumber(record.total);
+  const limit = toNumber(meta?.limit) ?? toNumber(record.limit) ?? 20;
+
+  return {
+    data: entries,
+    total: total ?? entries.length,
+    page: toNumber(meta?.page) ?? toNumber(record.page) ?? 1,
+    limit,
+    totalPages:
+      toNumber(meta?.totalPages) ??
+      toNumber(record.totalPages) ??
+      Math.max(1, Math.ceil((total ?? entries.length) / Math.max(limit, 1))),
+  };
+}
+
+function toNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+export async function fetchAuditLogs(
+  page = 1,
+  limit = 20,
+): Promise<AuditLogListResponse> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  const response = await request<unknown>(`/audit-logs?${params}`);
+  return normalizeAuditLogResponse(response);
+}
+
+export async function fetchAuditLogsByEntity(
+  entityType: string,
+  entityId: string,
+): Promise<AuditLogListResponse> {
+  const response = await request<unknown>(
+    `/audit-logs/entity/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`,
+  );
+  return normalizeAuditLogResponse(response);
+}
+
+export async function fetchAuditLogsByActor(
+  actorId: string,
+  page = 1,
+  limit = 20,
+): Promise<AuditLogListResponse> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  const response = await request<unknown>(
+    `/audit-logs/actor/${encodeURIComponent(actorId)}?${params}`,
+  );
+  return normalizeAuditLogResponse(response);
+}
 
 export function healthCheck() {
   return publicRequest('/health');

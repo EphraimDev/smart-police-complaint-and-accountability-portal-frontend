@@ -24,7 +24,11 @@ import {
   updateProfile,
   changePassword,
   fetchStatusHistory,
+  fetchAuditLogs,
+  fetchAuditLogsByActor,
+  fetchAuditLogsByEntity,
 } from '@/services/api';
+import type { AuditLogListResponse, AuditLogQuery } from '@/types/audit';
 import type {
   AssignComplaintPayload,
   CreateStationPayload,
@@ -51,6 +55,7 @@ export const queryKeys = {
   officer: (id: string) => ['officers', id] as const,
   stations: (page: number) => ['stations', page] as const,
   reports: (filters?: ReportFilters) => ['reports', filters] as const,
+  auditLogs: (query: AuditLogQuery) => ['audit-logs', query] as const,
   users: (page: number) => ['admin', 'users', page] as const,
   user: (id: string) => ['admin', 'users', id] as const,
   roles: ['admin', 'roles'] as const,
@@ -271,5 +276,29 @@ export function useUpdateProfile() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: (payload: ChangePasswordPayload) => changePassword(payload),
+  });
+}
+
+export function useAuditLogs(query: AuditLogQuery) {
+  return useQuery<AuditLogListResponse>({
+    queryKey: queryKeys.auditLogs(query),
+    queryFn: () => {
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 20;
+
+      if (query.mode === 'entity') {
+        return fetchAuditLogsByEntity(query.entityType ?? '', query.entityId ?? '');
+      }
+
+      if (query.mode === 'actor') {
+        return fetchAuditLogsByActor(query.actorId ?? '', page, limit);
+      }
+
+      return fetchAuditLogs(page, limit);
+    },
+    enabled:
+      query.mode === 'all' ||
+      (query.mode === 'actor' && !!query.actorId) ||
+      (query.mode === 'entity' && !!query.entityType && !!query.entityId),
   });
 }

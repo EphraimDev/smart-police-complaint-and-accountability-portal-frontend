@@ -19,12 +19,14 @@ import {
   OfficersListPage,
   StationsListPage,
   ReportsPage,
+  AuditTrailPage,
   ProfileSettingsPage,
 } from '@/pages/dashboard';
 import { UserManagementPage } from '@/pages/admin';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import {
   canAccessAnalytics,
+  canAccessAudit,
   canAccessComplaints,
   canAccessOfficers,
   canAccessStations,
@@ -104,6 +106,14 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute canAccess={canAccessAnalytics}>
             <ReportsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'audit-trail',
+        element: (
+          <ProtectedRoute canAccess={canAccessAudit}>
+            <AuditTrailPage />
           </ProtectedRoute>
         ),
       },

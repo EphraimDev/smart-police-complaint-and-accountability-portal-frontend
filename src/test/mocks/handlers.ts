@@ -10,6 +10,7 @@ import type {
   StatusHistoryEntry,
 } from '@/types/dashboard';
 import type { AdminUser } from '@/types/reports';
+import type { AuditLogEntry } from '@/types/audit';
 
 /* ── Mock auth data ── */
 const mockUser: AuthUser = {
@@ -180,6 +181,45 @@ const mockDashboardStats: DashboardStats = {
   },
 };
 
+const mockAuditLogs: AuditLogEntry[] = [
+  {
+    id: 'audit-001',
+    actorId: 'usr-001',
+    actorEmail: 'admin@npf.gov.ng',
+    action: 'complaint_update',
+    entityType: 'complaint',
+    entityId: 'cmp-001',
+    beforeState: { status: 'submitted', severity: 'medium' },
+    afterState: { status: 'under_review', severity: 'high' },
+    ipAddress: '127.0.0.1',
+    userAgent: 'Mozilla/5.0 Audit Browser',
+    correlationId: 'corr-audit-001',
+    outcome: 'success',
+    failureReason: null,
+    metadata: { source: 'dashboard', module: 'complaints' },
+    createdAt: '2026-04-07T10:20:00Z',
+    updatedAt: '2026-04-07T10:20:00Z',
+  },
+  {
+    id: 'audit-002',
+    actorId: 'usr-002',
+    actorEmail: 'audit@npf.gov.ng',
+    action: 'user_create',
+    entityType: 'user',
+    entityId: 'usr-099',
+    beforeState: null,
+    afterState: { email: 'new.user@npf.gov.ng', role: 'INVESTIGATOR' },
+    ipAddress: '10.0.0.20',
+    userAgent: 'Mozilla/5.0 Admin Console',
+    correlationId: 'corr-audit-002',
+    outcome: 'success',
+    failureReason: null,
+    metadata: { source: 'admin', invitedBy: 'usr-001' },
+    createdAt: '2026-04-06T09:15:00Z',
+    updatedAt: '2026-04-06T09:15:00Z',
+  },
+];
+
 /* ── Mock complaint result (public tracking) ── */
 const mockComplaintResult: ComplaintResult = {
   success: true,
@@ -262,6 +302,7 @@ function buildPermissionsResponse() {
     data: [
       { id: 'perm-1', name: 'user:read' },
       { id: 'perm-2', name: 'report:view' },
+      { id: 'perm-3', name: 'audit:read' },
     ],
   };
 }
@@ -397,6 +438,77 @@ export const handlers = [
   // Admin dashboard stats
   http.get('/api/v1/admin/dashboard', () => {
     return HttpResponse.json(mockDashboardStats);
+  }),
+
+  http.get('/api/v1/audit-logs', ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const limit = Number(url.searchParams.get('limit') ?? '20');
+
+    return HttpResponse.json({
+      data: mockAuditLogs,
+      total: mockAuditLogs.length,
+      page,
+      limit,
+      totalPages: 1,
+    });
+  }),
+  http.get('http://localhost:3006/api/v1/audit-logs', ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const limit = Number(url.searchParams.get('limit') ?? '20');
+
+    return HttpResponse.json({
+      data: mockAuditLogs,
+      total: mockAuditLogs.length,
+      page,
+      limit,
+      totalPages: 1,
+    });
+  }),
+  http.get('/api/v1/audit-logs/entity/:entityType/:entityId', ({ params }) => {
+    return HttpResponse.json(
+      mockAuditLogs.filter(
+        (entry) =>
+          entry.entityType === params.entityType && entry.entityId === params.entityId,
+      ),
+    );
+  }),
+  http.get('http://localhost:3006/api/v1/audit-logs/entity/:entityType/:entityId', ({ params }) => {
+    return HttpResponse.json(
+      mockAuditLogs.filter(
+        (entry) =>
+          entry.entityType === params.entityType && entry.entityId === params.entityId,
+      ),
+    );
+  }),
+  http.get('/api/v1/audit-logs/actor/:actorId', ({ params, request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const limit = Number(url.searchParams.get('limit') ?? '20');
+    const filtered = mockAuditLogs.filter((entry) => entry.actorId === params.actorId);
+
+    return HttpResponse.json({
+      data: filtered,
+      total: filtered.length,
+      page,
+      limit,
+      totalPages: 1,
+    });
+  }),
+  http.get('http://localhost:3006/api/v1/audit-logs/actor/:actorId', ({ params, request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const limit = Number(url.searchParams.get('limit') ?? '20');
+    const filtered = mockAuditLogs.filter((entry) => entry.actorId === params.actorId);
+
+    return HttpResponse.json({
+      data: filtered,
+      total: filtered.length,
+      page,
+      limit,
+      totalPages: 1,
+    });
   }),
 
   // List complaints (paginated)

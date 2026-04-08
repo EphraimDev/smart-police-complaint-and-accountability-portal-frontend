@@ -4,6 +4,7 @@ import { Topbar } from '@/components/Topbar';
 import { useAuth } from '@/hooks/useAuth';
 import type { AuthUser } from '@/types/auth';
 import {
+  canAccessAudit,
   canAccessAnalytics,
   canAccessComplaints,
   canAccessDashboard,
@@ -22,6 +23,7 @@ const allNavItems: NavDef[] = [
   { to: '/dashboard/officers', label: 'Officers', isVisible: canAccessOfficers },
   { to: '/dashboard/stations', label: 'Stations', isVisible: canAccessStations },
   { to: '/dashboard/analytics', label: 'Analytics', isVisible: canAccessAnalytics },
+  { to: '/dashboard/audit-trail', label: 'Audit Trail', isVisible: canAccessAudit },
   { to: '/dashboard/users', label: 'Users', isVisible: canAccessUserManagement },
   { to: '/dashboard/settings', label: 'Settings' },
 ];

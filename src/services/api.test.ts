@@ -1,15 +1,21 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { fetchCurrentUser } from '@/services/api';
 import { server } from '@/test/mocks/server';
 
 describe('api token refresh', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_PAYLOAD_ENCRYPTION_ENABLED', 'false');
+  });
+
   afterEach(() => {
     localStorage.clear();
+    vi.unstubAllEnvs();
   });
 
   it('retries the original request after a successful refresh response with nested tokens', async () => {
+    vi.resetModules();
     let meRequestCount = 0;
+    const { fetchCurrentUser } = await import('@/services/api');
 
     server.use(
       http.get('http://localhost:3006/api/v1/users/me', ({ request }) => {

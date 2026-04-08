@@ -69,6 +69,13 @@ export function canAccessAnalytics(user: AuthUser | null | undefined): boolean {
   );
 }
 
+export function canAccessAudit(user: AuthUser | null | undefined): boolean {
+  return (
+    hasAnyRole(user, ['SUPER_ADMIN']) ||
+    hasAnyPermission(user, [Permission.AUDIT_READ, Permission.ADMIN_DASHBOARD])
+  );
+}
+
 export function canAccessUserManagement(user: AuthUser | null | undefined): boolean {
   return (
     hasAnyRole(user, ['SUPER_ADMIN', 'ADMIN']) ||
